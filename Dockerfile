@@ -1,6 +1,6 @@
 # --- Estágio 1: Build com Maven ---
 # Usamos uma imagem que já tem Maven e JDK para construir o projeto
-FROM maven:3.8.5-openjdk-17 AS builder
+FROM maven:3.8.5-openjdk-24 AS builder
 
 # Define o diretório de trabalho
 WORKDIR /app
@@ -20,7 +20,7 @@ RUN mvn clean package -DskipTests
 
 # --- Estágio 2: Imagem final ---
 # Usamos uma imagem leve, apenas com o Java para rodar a aplicação
-FROM openjdk:17-slim
+FROM openjdk:24-slim
 
 # Define o diretório de trabalho
 WORKDIR /app
