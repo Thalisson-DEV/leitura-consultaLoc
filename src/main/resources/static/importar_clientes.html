@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar Clientes</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+    <div class="logo-container">
+        <h2>Busca Sipel</h2>
+    </div>
+    <ul class="sidebar-nav">
+        <li><a href="index.html"><i data-lucide="home"></i> <span class="nav-text">Início</span></a></li>
+        <li><a href="buscar_instalacao.html"><i data-lucide="building-2"></i> <span class="nav-text">Por Instalação</span></a></li>
+        <li><a href="buscar_ctacontrato.html"><i data-lucide="file-text"></i> <span class="nav-text">Por Cta. Contrato</span></a></li>
+        <li><a href="buscar_numero_serie.html"><i data-lucide="barcode"></i> <span class="nav-text">Por N° de Série</span></a></li>
+        <li><a href="buscar_poste.html"><i data-lucide="lightbulb"></i> <span class="nav-text">Por N° do Poste</span></a></li>
+        <li><a href=""><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
+        <li><a href="importar_clientes.html"><i data-lucide="upload-cloud"></i> <span class="nav-text">Importar Clientes</span></a></li>
+    </ul>
+</nav>
+
+<div class="page-wrapper">
+    <header class="page-header">
+        <button id="menu-toggle"><i data-lucide="menu"></i></button>
+        <div class="header-controls">
+            <button id="theme-toggle"><i data-lucide="sun"></i><i data-lucide="moon" style="display:none;"></i></button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <h1>Importar Clientes</h1>
+            <p>Selecione um arquivo CSV para adicionar novos clientes ao sistema.</p>
+            <form id="form-importar" enctype="multipart/form-data">
+                <label for="file-input">Arquivo CSV</label>
+                <input id="file-input" type="file" name="file" accept=".csv" required>
+                <button type="submit">Importar</button>
+            </form>
+            <div id="loading-spinner" class="loading-spinner"></div>
+        </div>
+    </main>
+</div>
+
+<script src="assets/layout.js"></script>
+<script>
+    const form = document.getElementById('form-importar');
+    const fileInput = document.getElementById('file-input');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        if (!fileInput.files || fileInput.files.length === 0) {
+            showNotification('Por favor, selecione um arquivo para importar.', 'error');
+            return;
+        }
+
+        loadingSpinner.style.display = 'block';
+        submitButton.disabled = true;
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        try {
+            const response = await fetch('/api/v1/clientes/importar/csv', {
+                method: 'POST',
+                body: formData
+            });
+            const resultText = await response.text();
+            if (response.ok) {
+                showNotification(resultText, 'success');
+            } else {
+                showNotification(resultText, 'error');
+            }
+        } catch (error) {
+            showNotification('Erro de conexão. Não foi possível contatar o servidor.', 'error');
+            console.error('Erro na requisição de importação:', error);
+        } finally {
+            loadingSpinner.style.display = 'none';
+            submitButton.disabled = false;
+            form.reset();
+        }
+    });
+</script>
+</body>
+</html>

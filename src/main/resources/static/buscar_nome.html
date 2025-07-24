@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Buscar por Nome</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav>
+  <h2>Buscar Cliente</h2>
+  <a href="index.html">Início</a>
+  <a href="buscar_instalacao.html">Por Instalação</a>
+  <a href="buscar_ctacontrato.html">Por Cta. Contrato</a>
+  <a href="buscar_numero_serie.html">Por N° de Série</a>
+  <a href="buscar_poste.html">Por N° do Poste</a>
+  <a href="">Por Nome</a>
+  <a href="importar_clientes.html">Importar Clientes</a>
+</nav>
+<div class="main-content">
+  <div class="container">
+    <h1>Buscar pelo Nome do Cliente</h1>
+    <!-- Formulário ajustado com ID e sem action/method -->
+    <form id="form-busca-nome">
+      <input
+              id="input-nome"
+              type="text"
+              name="nomeCliente"
+              placeholder="Digite o Nome COMPLETO do Cliente"
+              required>
+      <button type="submit">Ver no Google Maps</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Seleciona o formulário pelo seu novo ID
+  const form = document.getElementById('form-busca-nome');
+
+  // Adiciona um 'escutador' para o evento de 'submit' (envio) do formulário
+  form.addEventListener('submit', function(event) {
+    // 1. Previne o comportamento padrão do formulário.
+    event.preventDefault();
+
+    // 2. Pega o valor digitado no campo de input.
+    const nomeCliente = document.getElementById('input-nome').value;
+
+    // 3. Verifica se o valor não está vazio.
+    if (nomeCliente) {
+      // 4. Constrói a nova URL no formato que a API espera.
+      const novaUrl = `/api/v1/clientes/nome-cliente/${nomeCliente}/redirecionar-maps`;
+
+      // 5. Redireciona o navegador do usuário para a nova URL.
+      console.log('Redirecionando para:', novaUrl);
+      window.location.href = novaUrl;
+    }
+  });
+</script>
+
+</body>
+</html>

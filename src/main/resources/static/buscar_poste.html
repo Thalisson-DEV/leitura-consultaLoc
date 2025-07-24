@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buscar por N° do Poste</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="logo-container">
+    <h2>Busca Sipel</h2>
+  </div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><i data-lucide="home"></i> <span class="nav-text">Início</span></a></li>
+    <li><a href="buscar_instalacao.html"><i data-lucide="building-2"></i> <span class="nav-text">Por Instalação</span></a></li>
+    <li><a href="buscar_ctacontrato.html"><i data-lucide="file-text"></i> <span class="nav-text">Por Cta. Contrato</span></a></li>
+    <li><a href="buscar_numero_serie.html"><i data-lucide="barcode"></i> <span class="nav-text">Por N° de Série</span></a></li>
+    <li><a href="buscar_poste.html"><i data-lucide="lightbulb"></i> <span class="nav-text">Por N° do Poste</span></a></li>
+    <li><a href=""><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
+    <li><a href="importar_clientes.html"><i data-lucide="upload-cloud"></i> <span class="nav-text">Importar Clientes</span></a></li>
+  </ul>
+</nav>
+
+<div class="page-wrapper">
+  <header class="page-header">
+    <button id="menu-toggle"><i data-lucide="menu"></i></button>
+    <div class="header-controls">
+      <button id="theme-toggle"><i data-lucide="sun"></i><i data-lucide="moon" style="display:none;"></i></button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="container">
+      <h1>Buscar por Número do Poste</h1>
+      <p>Digite o número do poste para localizar no mapa.</p>
+      <form id="form-busca-poste">
+        <label for="input-poste">Número do Poste</label>
+        <input id="input-poste" type="text" name="numeroPoste" placeholder="Ex: B123456" required>
+        <button type="submit">Ver no Google Maps</button>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script src="assets/layout.js"></script>
+<script>
+  document.getElementById('form-busca-poste').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const numeroPoste = document.getElementById('input-poste').value;
+    if (numeroPoste) {
+      window.location.href = `/api/v1/clientes/numero-poste/${numeroPoste}/redirecionar-maps`;
+    } else {
+      showNotification('Por favor, digite um número de poste.', 'error');
+    }
+  });
+</script>
+</body>
+</html>

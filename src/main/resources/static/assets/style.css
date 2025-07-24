@@ -1,0 +1,290 @@
+/* --- VARIAVEIS DE COR E DESIGN --- */
+:root {
+    --cor-primaria: #102a83;
+    --cor-primaria-hover: #1b42b8;
+    --cor-erro: #e63946;
+    --cor-sucesso: #2a9d8f;
+
+    /* Tema Claro (Padrão) */
+    --cor-fundo: #f4f6f8;
+    --cor-fundo-secundario: #ffffff;
+    --cor-texto: #1e2a38;
+    --cor-texto-suave: #6c757d;
+    --cor-borda: #dee2e6;
+    --sombra-caixa: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    /* Cores da Barra de Navegação */
+    --nav-fundo: #1e2a38;
+    --nav-texto: #e0e0e0;
+    --nav-texto-hover: #ffffff;
+    --nav-fundo-ativo: var(--cor-primaria);
+}
+
+body.dark-mode {
+    /* Tema Escuro */
+    --cor-fundo: #121212;
+    --cor-fundo-secundario: #1e1e1e;
+    --cor-texto: #e0e0e0;
+    --cor-texto-suave: #adb5bd;
+    --cor-borda: #495057;
+    --sombra-caixa: 0 4px 15px rgba(0, 0, 0, 0.2);
+
+    /* Cores da Barra de Navegação no modo escuro */
+    --nav-fundo: #1e2a38;
+    --nav-texto: #e0e0e0;
+    --nav-fundo-ativo: var(--cor-primaria);
+}
+
+/* --- ESTILOS GERAIS --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto);
+    transition: background-color 0.3s, color 0.3s;
+    display: flex;
+}
+
+/* --- BARRA DE NAVEGAÇÃO LATERAL (NAV) --- */
+.sidebar {
+    width: 260px;
+    background-color: var(--nav-fundo);
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.3s ease;
+    overflow-x: hidden;
+}
+
+.sidebar .logo-container {
+    padding: 20px;
+    text-align: center;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.sidebar .logo-container h2 {
+    font-size: 22px;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.sidebar-nav {
+    flex-grow: 1;
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+}
+
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    padding: 15px 25px;
+    text-decoration: none;
+    color: var(--nav-texto);
+    transition: background-color 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.sidebar-nav a:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav a.active {
+    background-color: var(--nav-fundo-ativo);
+    color: var(--nav-texto-hover);
+    font-weight: 500;
+}
+
+.sidebar-nav a i {
+    margin-right: 15px;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.sidebar-nav a .nav-text {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+/* Estilos para o menu recolhido */
+.sidebar.collapsed {
+    width: 80px;
+}
+
+.sidebar.collapsed .logo-container h2 {
+    display: none;
+}
+
+.sidebar.collapsed .nav-text {
+    opacity: 0;
+    display: none;
+}
+
+/* --- CONTEÚDO PRINCIPAL --- */
+.page-wrapper {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    transition: margin-left 0.3s ease;
+}
+
+body.nav-collapsed .page-wrapper {
+    margin-left: 80px;
+    width: calc(100% - 80px);
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: var(--cor-fundo-secundario);
+    border-bottom: 1px solid var(--cor-borda);
+    box-shadow: var(--sombra-caixa);
+}
+
+.header-controls button {
+    background: none;
+    border: none;
+    color: var(--cor-texto);
+    cursor: pointer;
+    padding: 8px;
+    margin-left: 10px;
+}
+
+.main-content {
+    padding: 40px;
+}
+
+.container {
+    background: var(--cor-fundo-secundario);
+    padding: 40px;
+    border-radius: 12px;
+    max-width: 600px;
+    margin: 0 auto;
+    box-shadow: var(--sombra-caixa);
+    text-align: center;
+}
+
+.container h1 {
+    margin-bottom: 15px;
+}
+
+.container p {
+    color: var(--cor-texto-suave);
+    margin-bottom: 30px;
+}
+
+/* --- FORMULÁRIOS --- */
+form {
+    text-align: left;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--cor-texto-suave);
+}
+
+input[type="text"],
+input[type="number"],
+input[type="file"] {
+    display: block;
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+    font-size: 16px;
+    border: 1px solid var(--cor-borda);
+    background-color: var(--cor-fundo);
+    color: var(--cor-texto);
+    border-radius: 8px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="file"] {
+    padding: 10px;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--cor-primaria);
+    box-shadow: 0 0 0 3px rgba(16, 42, 131, 0.2);
+}
+
+button[type="submit"] {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--cor-primaria);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+button[type="submit"]:hover {
+    background-color: var(--cor-primaria-hover);
+}
+
+button[type="submit"]:active {
+    transform: scale(0.98);
+}
+
+button[type="submit"]:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+
+/* --- NOTIFICAÇÕES E FEEDBACK --- */
+.notification-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 8px;
+    color: #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: fadeInToast 0.5s forwards;
+    z-index: 1000;
+}
+@keyframes fadeInToast {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.notification-toast.success { background-color: var(--cor-sucesso); }
+.notification-toast.error { background-color: var(--cor-erro); }
+.notification-toast.info { background-color: var(--cor-primaria); }
+
+
+/* Spinner de carregamento */
+.loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: var(--cor-primaria);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    display: none;
+    margin: 20px auto 0;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
