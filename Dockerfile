@@ -1,6 +1,10 @@
-# --- Estágio 1: Build com Maven ---
-# Usamos uma imagem que já tem Maven e JDK para construir o projeto
-FROM maven:3.8.5-openjdk-24 AS builder
+# --- Estágio 1: Build com Maven e Java 24 ---
+# Usamos uma imagem oficial do Java 24 e instalamos o Maven nela.
+FROM eclipse-temurin:24-jdk AS builder
+
+# Instala o Maven
+RUN apt-get update && \
+    apt-get install -y maven
 
 # Define o diretório de trabalho
 WORKDIR /app
@@ -19,15 +23,15 @@ RUN mvn clean package -DskipTests
 
 
 # --- Estágio 2: Imagem final ---
-# Usamos uma imagem leve, apenas com o Java para rodar a aplicação
-FROM openjdk:24-slim
+# Usamos uma imagem leve, apenas com o Java 24 para rodar a aplicação
+FROM eclipse-temurin:24-jre
 
 # Define o diretório de trabalho
 WORKDIR /app
 
 # Copia o arquivo .jar que foi gerado no estágio 'builder'
 # O nome do .jar deve ser o mesmo que o Maven gera.
-COPY --from=builder /app/target/leitura-consultaLoc-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /app/target/leituraconsultaloc-0.0.1-SNAPSHOT.jar app.jar
 
 # Expõe a porta que sua aplicação Spring Boot usa (padrão 8080)
 EXPOSE 8080
