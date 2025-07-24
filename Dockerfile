@@ -31,7 +31,7 @@ WORKDIR /app
 
 # Copia o arquivo .jar que foi gerado no estágio 'builder'
 # O nome do .jar deve ser o mesmo que o Maven gera.
-COPY --from=builder /app/target/leituraconsultaloc-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=builder /app/target/leitura-consultaLoc-0.0.1-SNAPSHOT.jar app.jar
 
 # Expõe a porta que sua aplicação Spring Boot usa (padrão 8080)
 EXPOSE 8080
