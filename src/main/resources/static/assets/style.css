@@ -8,13 +8,13 @@
     /* Tema Claro (Padrão) */
     --cor-fundo: #f4f6f8;
     --cor-fundo-secundario: #ffffff;
-    --cor-texto: #1e2a38;
+    --cor-texto: #041248;
     --cor-texto-suave: #6c757d;
     --cor-borda: #dee2e6;
     --sombra-caixa: 0 4px 12px rgba(0, 0, 0, 0.08);
 
     /* Cores da Barra de Navegação */
-    --nav-fundo: #1e2a38;
+    --nav-fundo: #041248;
     --nav-texto: #e0e0e0;
     --nav-texto-hover: #ffffff;
     --nav-fundo-ativo: var(--cor-primaria);
@@ -30,7 +30,7 @@ body.dark-mode {
     --sombra-caixa: 0 4px 15px rgba(0, 0, 0, 0.2);
 
     /* Cores da Barra de Navegação no modo escuro */
-    --nav-fundo: #1e2a38;
+    --nav-fundo: #041248;
     --nav-texto: #e0e0e0;
     --nav-fundo-ativo: var(--cor-primaria);
 }

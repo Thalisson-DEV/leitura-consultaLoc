@@ -22,7 +22,6 @@ import java.net.URI;
 @CrossOrigin(origins = "*")
 public class ClienteController {
 
-    // Injetando apenas a camada de serviço, como deve ser.
     @Autowired
     private ClienteService clienteService;
 
@@ -33,13 +32,11 @@ public class ClienteController {
      */
     @PostMapping("/importar/csv")
     public ResponseEntity<String> importarClientes(@RequestParam("file") MultipartFile file) {
-        // A lógica de try-catch foi movida para um handler global para erros mais específicos.
-        // Mantemos um try-catch geral aqui para a operação de arquivo.
         try {
-            long totalImportado = clienteService.importarCsvEmLotes(file);
-            return ResponseEntity.ok("Importação realizada com sucesso! Total de registros no sistema: " + totalImportado);
+            long totalRegistros = clienteService.importarCsvEmLotes(file);
+            return ResponseEntity.ok("Importação realizada com sucesso! Total de registros no sistema: " + totalRegistros);
         } catch (Exception e) {
-            // Idealmente, criar exceções mais específicas para falhas de importação.
+            // O GlobalExceptionHandler pode pegar isso, mas um catch aqui é bom para erros de I/O.
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao processar o arquivo CSV: " + e.getMessage());
         }
@@ -47,28 +44,20 @@ public class ClienteController {
 
     /**
      * Redireciona para o Google Maps com base no número da instalação do cliente.
-     * Usa @PathVariable para um endpoint RESTful mais limpo.
-     * Exemplo de URL: GET /api/v1/clientes/instalacao/12345678/redirecionar-maps
-     *
      * @param instalacao O número da instalação do cliente.
-     * @return ResponseEntity com status 302 (Found) para redirecionamento.
+     * @return ResponseEntity com status 302 (Found) para redirecionamento ou 404 se não encontrado.
      */
     @GetMapping("/instalacao/{instalacao}/redirecionar-maps")
-    public ResponseEntity<Void> redirecionarPorInstalacao(@PathVariable long instalacao) throws Throwable {
-        // A lógica de busca e verificação de "não encontrado" agora está no serviço.
-        // Se o cliente não for encontrado, o serviço lançará uma exceção que será
-        // tratada pelo GlobalExceptionHandler, retornando um 404.
+    public ResponseEntity<Void> redirecionarPorInstalacao(@PathVariable long instalacao) {
+        // CORREÇÃO: Removido 'throws Throwable'
         Cliente cliente = clienteService.buscarPorInstalacao(instalacao);
         return criarRespostaDeRedirecionamento(cliente);
     }
 
     /**
      * Redireciona para o Google Maps com base no número da conta contrato do cliente.
-     * Usa @PathVariable para um endpoint RESTful mais limpo.
-     * Exemplo de URL: GET /api/v1/clientes/conta-contrato/ABC987/redirecionar-maps
-     *
      * @param contaContrato O número da conta contrato do cliente.
-     * @return ResponseEntity com status 302 (Found) para redirecionamento.
+     * @return ResponseEntity com status 302 (Found) para redirecionamento ou 404 se não encontrado.
      */
     @GetMapping("/conta-contrato/{contaContrato}/redirecionar-maps")
     public ResponseEntity<Void> redirecionarPorContaContrato(@PathVariable String contaContrato) {
@@ -77,12 +66,9 @@ public class ClienteController {
     }
 
     /**
-     * Redireciona para o Google Maps com base no número da conta contrato do cliente.
-     * Usa @PathVariable para um endpoint RESTful mais limpo.
-     * Exemplo de URL: GET /api/v1/clientes/conta-contrato/ABC987/redirecionar-maps
-     *
-     * @param numeroSerie O número da conta contrato do cliente.
-     * @return ResponseEntity com status 302 (Found) para redirecionamento.
+     * Redireciona para o Google Maps com base no número de série do medidor.
+     * @param numeroSerie O número de série do medidor.
+     * @return ResponseEntity com status 302 (Found) para redirecionamento ou 404 se não encontrado.
      */
     @GetMapping("/numero-serie/{numeroSerie}/redirecionar-maps")
     public ResponseEntity<Void> redirecionarPorNumeroSerie(@PathVariable String numeroSerie) {
@@ -91,26 +77,20 @@ public class ClienteController {
     }
 
     /**
-     * Redireciona para o Google Maps com base no número da conta contrato do cliente.
-     * Usa @PathVariable para um endpoint RESTful mais limpo.
-     * Exemplo de URL: GET /api/v1/clientes/conta-contrato/ABC987/redirecionar-maps
-     *
-     * @param nomeCliente O número da conta contrato do cliente.
-     * @return ResponseEntity com status 302 (Found) para redirecionamento.
+     * Redireciona para o Google Maps com base no nome do cliente.
+     * @param nomeCliente O nome do cliente a ser buscado.
+     * @return ResponseEntity com status 302 (Found) para redirecionamento ou 404 se não encontrado.
      */
-    @GetMapping("/nome-cliente/{nomeCliente}/redirecionar-maps")
+    @GetMapping("/nome/{nomeCliente}/redirecionar-maps") // CORREÇÃO: URL padronizada
     public ResponseEntity<Void> redirecionarPorNomeCliente(@PathVariable String nomeCliente) {
         Cliente cliente = clienteService.buscarPorNomeCliente(nomeCliente);
         return criarRespostaDeRedirecionamento(cliente);
     }
 
     /**
-     * Redireciona para o Google Maps com base no número da conta contrato do cliente.
-     * Usa @PathVariable para um endpoint RESTful mais limpo.
-     * Exemplo de URL: GET /api/v1/clientes/conta-contrato/ABC987/redirecionar-maps
-     *
-     * @param numeroPoste O número da conta contrato do cliente.
-     * @return ResponseEntity com status 302 (Found) para redirecionamento.
+     * Redireciona para o Google Maps com base no número do poste.
+     * @param numeroPoste O número do poste a ser buscado.
+     * @return ResponseEntity com status 302 (Found) para redirecionamento ou 404 se não encontrado.
      */
     @GetMapping("/numero-poste/{numeroPoste}/redirecionar-maps")
     public ResponseEntity<Void> redirecionarPorNumeroPoste(@PathVariable String numeroPoste) {
@@ -125,10 +105,8 @@ public class ClienteController {
      */
     private ResponseEntity<Void> criarRespostaDeRedirecionamento(Cliente cliente) {
         String mapsUrl = String.format("https://www.google.com/maps?q=%s,%s", cliente.getLatitude(), cliente.getLongitude());
-
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(URI.create(mapsUrl));
-
-        return new ResponseEntity<>(headers, HttpStatus.FOUND); // FOUND (302) é o status correto para redirecionamento.
+        return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 }

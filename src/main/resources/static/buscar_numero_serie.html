@@ -19,7 +19,7 @@
     <li><a href="buscar_ctacontrato.html"><i data-lucide="file-text"></i> <span class="nav-text">Por Cta. Contrato</span></a></li>
     <li><a href="buscar_numero_serie.html"><i data-lucide="barcode"></i> <span class="nav-text">Por N° de Série</span></a></li>
     <li><a href="buscar_poste.html"><i data-lucide="lightbulb"></i> <span class="nav-text">Por N° do Poste</span></a></li>
-    <li><a href=""><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
+    <li><a href="buscar_nome.html"><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
     <li><a href="importar_clientes.html"><i data-lucide="upload-cloud"></i> <span class="nav-text">Importar Clientes</span></a></li>
   </ul>
 </nav>
@@ -47,13 +47,33 @@
 
 <script src="assets/layout.js"></script>
 <script>
-  document.getElementById('form-busca-serie').addEventListener('submit', function(event) {
+  document.getElementById('form-busca-serie').addEventListener('submit', async function(event) {
     event.preventDefault();
     const numeroSerie = document.getElementById('input-serie').value;
-    if (numeroSerie) {
-      window.location.href = `/api/v1/clientes/numero-serie/${numeroSerie}/redirecionar-maps`;
-    } else {
+
+    if (!numeroSerie) {
       showNotification('Por favor, digite um número de série.', 'error');
+      return;
+    }
+
+    const url = `/api/v1/clientes/numero-serie/${numeroSerie}/redirecionar-maps`;
+
+    try {
+      const response = await fetch(url, {
+        redirect: 'manual'
+      });
+
+      if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+        window.location.href = url;
+      } else {
+        // Se for um erro, lemos a mensagem JSON e mostramos a notificação.
+        const errorData = await response.json();
+        showNotification(errorData.message || 'Ocorreu um erro.', 'error');
+        // A lógica de redirecionamento que estava aqui foi removida.
+      }
+
+    } catch (err) {
+      showNotification('Erro de conexão com o servidor.', 'error');
     }
   });
 </script>

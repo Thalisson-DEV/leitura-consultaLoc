@@ -19,7 +19,7 @@
     <li><a href="buscar_ctacontrato.html"><i data-lucide="file-text"></i> <span class="nav-text">Por Cta. Contrato</span></a></li>
     <li><a href="buscar_numero_serie.html"><i data-lucide="barcode"></i> <span class="nav-text">Por N° de Série</span></a></li>
     <li><a href="buscar_poste.html"><i data-lucide="lightbulb"></i> <span class="nav-text">Por N° do Poste</span></a></li>
-    <li><a href=""><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
+    <li><a href="buscar_nome.html"><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
     <li><a href="importar_clientes.html"><i data-lucide="upload-cloud"></i> <span class="nav-text">Importar Clientes</span></a></li>
   </ul>
 </nav>
@@ -47,13 +47,31 @@
 
 <script src="assets/layout.js"></script>
 <script>
-  document.getElementById('form-busca-instalacao').addEventListener('submit', function(event) {
+  document.getElementById('form-busca-instalacao').addEventListener('submit', async function(event) {
     event.preventDefault();
     const instalacaoId = document.getElementById('input-instalacao').value;
-    if (instalacaoId) {
-      window.location.href = `/api/v1/clientes/instalacao/${instalacaoId}/redirecionar-maps`;
-    } else {
+
+    if (!instalacaoId) {
       showNotification('Por favor, digite um número de instalação.', 'error');
+      return;
+    }
+
+    const url = `/api/v1/clientes/instalacao/${instalacaoId}/redirecionar-maps`;
+
+    try {
+      const response = await fetch(url, {
+        redirect: 'manual'
+      });
+
+      if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+        window.location.href = url;
+      } else {
+        const errorData = await response.json();
+        showNotification(errorData.message || 'Ocorreu um erro.', 'error');
+      }
+
+    } catch (err) {
+      showNotification('Erro de conexão com o servidor.', 'error');
     }
   });
 </script>
