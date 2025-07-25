@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Como usar os botões</title>
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/responsive.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .botoes-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .botao-exemplo {
+      display: flex;
+      align-items: center;
+      padding: 15px;
+      background: var(--cor-fundo-secundario);
+      border-radius: 8px;
+      box-shadow: var(--sombra-caixa);
+    }
+
+    .botao-demo {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 15px;
+      flex-shrink: 0;
+      background-color: var(--cor-primaria);
+      color: white;
+    }
+
+    .botao-texto {
+      flex-grow: 1;
+    }
+
+    .botao-texto h3 {
+      margin-bottom: 5px;
+    }
+
+    .voltar-btn {
+      display: inline-block;
+      margin-top: 30px;
+      padding: 10px 20px;
+      background-color: var(--cor-primaria);
+      color: white;
+      border-radius: 8px;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-wrapper" style="margin-left: 0; width: 100%;">
+    <main class="main-content">
+      <div class="container" style="max-width: 800px;">
+        <h1>Como usar os botões da interface</h1>
+        <p>Nossa interface possui botões especiais para melhorar sua experiência. Confira abaixo:</p>
+
+        <div class="botoes-container">
+          <div class="botao-exemplo">
+            <div class="botao-demo">
+              <i data-lucide="menu"></i>
+            </div>
+            <div class="botao-texto">
+              <h3>Botão de Menu</h3>
+              <p>Localizado no canto inferior direito em dispositivos móveis. Use-o para abrir o menu de navegação lateral.</p>
+            </div>
+          </div>
+
+          <div class="botao-exemplo">
+            <div class="botao-demo">
+              <i data-lucide="sun"></i>
+            </div>
+            <div class="botao-texto">
+              <h3>Botão de Tema</h3>
+              <p>Localizado no canto superior direito. Alterna entre tema claro e escuro para melhorar sua experiência visual.</p>
+            </div>
+          </div>
+        </div>
+
+        <a href="index.html" class="voltar-btn">Voltar para o Dashboard</a>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    });
+  </script>
+</body>
+</html>

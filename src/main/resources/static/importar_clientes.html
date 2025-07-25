@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Importar Clientes</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/responsive.css">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
@@ -19,7 +20,7 @@
         <li><a href="buscar_ctacontrato.html"><i data-lucide="file-text"></i> <span class="nav-text">Por Cta. Contrato</span></a></li>
         <li><a href="buscar_numero_serie.html"><i data-lucide="barcode"></i> <span class="nav-text">Por N° de Série</span></a></li>
         <li><a href="buscar_poste.html"><i data-lucide="lightbulb"></i> <span class="nav-text">Por N° do Poste</span></a></li>
-        <li><a href=""><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
+        <li><a href="buscar_nome.html"><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
         <li><a href="importar_clientes.html"><i data-lucide="upload-cloud"></i> <span class="nav-text">Importar Clientes</span></a></li>
     </ul>
 </nav>
@@ -47,6 +48,7 @@
 </div>
 
 <script src="assets/layout.js"></script>
+<script src="assets/menu-fix.js"></script>
 <script>
     const form = document.getElementById('form-importar');
     const fileInput = document.getElementById('file-input');

@@ -2,56 +2,86 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Buscar por Nome</title>
   <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/responsive.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body>
-<nav>
-  <h2>Buscar Cliente</h2>
-  <a href="index.html">Início</a>
-  <a href="buscar_instalacao.html">Por Instalação</a>
-  <a href="buscar_ctacontrato.html">Por Cta. Contrato</a>
-  <a href="buscar_numero_serie.html">Por N° de Série</a>
-  <a href="buscar_poste.html">Por N° do Poste</a>
-  <a href="">Por Nome</a>
-  <a href="importar_clientes.html">Importar Clientes</a>
-</nav>
-<div class="main-content">
-  <div class="container">
-    <h1>Buscar pelo Nome do Cliente</h1>
-    <!-- Formulário ajustado com ID e sem action/method -->
-    <form id="form-busca-nome">
-      <input
-              id="input-nome"
-              type="text"
-              name="nomeCliente"
-              placeholder="Digite o Nome COMPLETO do Cliente"
-              required>
-      <button type="submit">Ver no Google Maps</button>
-    </form>
+
+<nav class="sidebar" id="sidebar">
+  <div class="logo-container">
+    <h2>Busca Sipel</h2>
   </div>
+  <ul class="sidebar-nav">
+    <li><a href="index.html"><i data-lucide="home"></i> <span class="nav-text">Início</span></a></li>
+    <li><a href="buscar_instalacao.html"><i data-lucide="building-2"></i> <span class="nav-text">Por Instalação</span></a></li>
+    <li><a href="buscar_ctacontrato.html"><i data-lucide="file-text"></i> <span class="nav-text">Por Cta. Contrato</span></a></li>
+    <li><a href="buscar_numero_serie.html"><i data-lucide="barcode"></i> <span class="nav-text">Por N° de Série</span></a></li>
+    <li><a href="buscar_poste.html"><i data-lucide="lightbulb"></i> <span class="nav-text">Por N° do Poste</span></a></li>
+    <li><a href="buscar_nome.html"><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
+    <li><a href="importar_clientes.html"><i data-lucide="upload-cloud"></i> <span class="nav-text">Importar Clientes</span></a></li>
+  </ul>
+</nav>
+
+<div class="page-wrapper">
+  <header class="page-header">
+    <button id="menu-toggle"><i data-lucide="menu"></i></button>
+    <div class="header-controls">
+      <button id="theme-toggle"><i data-lucide="sun"></i><i data-lucide="moon" style="display:none;"></i></button>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <div class="container">
+      <h1>Buscar pelo Nome do Cliente</h1>
+      <p>Digite o nome completo do cliente para localizar no mapa.</p>
+      <form id="form-busca-nome">
+        <label for="input-nome">Nome do Cliente</label>
+        <input
+          id="input-nome"
+          type="text"
+          name="nomeCliente"
+          placeholder="Digite o Nome COMPLETO do Cliente"
+          required>
+        <button type="submit">Ver no Google Maps</button>
+      </form>
+    </div>
+  </main>
 </div>
 
+<script src="assets/layout.js"></script>
+<script src="assets/menu-fix.js"></script>
 <script>
-  // Seleciona o formulário pelo seu novo ID
-  const form = document.getElementById('form-busca-nome');
-
-  // Adiciona um 'escutador' para o evento de 'submit' (envio) do formulário
-  form.addEventListener('submit', function(event) {
-    // 1. Previne o comportamento padrão do formulário.
+  document.getElementById('form-busca-nome').addEventListener('submit', async function(event) {
     event.preventDefault();
-
-    // 2. Pega o valor digitado no campo de input.
     const nomeCliente = document.getElementById('input-nome').value;
 
-    // 3. Verifica se o valor não está vazio.
-    if (nomeCliente) {
-      // 4. Constrói a nova URL no formato que a API espera.
-      const novaUrl = `/api/v1/clientes/nome-cliente/${nomeCliente}/redirecionar-maps`;
+    if (!nomeCliente) {
+      showNotification('Por favor, digite o nome do cliente.', 'error');
+      return;
+    }
 
-      // 5. Redireciona o navegador do usuário para a nova URL.
-      console.log('Redirecionando para:', novaUrl);
-      window.location.href = novaUrl;
+    const url = `/api/v1/clientes/nome-cliente/${nomeCliente}/redirecionar-maps`;
+
+    try {
+      // Usamos fetch para chamar a API, com redirect: 'manual'
+      const response = await fetch(url, {
+        redirect: 'manual'
+      });
+
+      // Se a resposta for um redirecionamento (sucesso), navegamos para a URL.
+      if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+        window.location.href = url;
+      } else {
+        // Se for um erro (ex: 404), lemos a mensagem JSON.
+        const errorData = await response.json();
+        showNotification(errorData.message || 'Ocorreu um erro.', 'error');
+      }
+
+    } catch (err) {
+      showNotification('Erro de conexão com o servidor.', 'error');
     }
   });
 </script>

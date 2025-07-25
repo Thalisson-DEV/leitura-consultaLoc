@@ -5,7 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Central de Buscas</title>
     <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/responsive.css">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="assets/dashboard-api.js"></script>
+    <script>
+      // Garantir que os ícones Lucide serão carregados mesmo com conexões lentas
+      window.addEventListener('load', function() {
+        // Verificar se todos os ícones foram carregados
+        setTimeout(function() {
+          if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+          }
+
+          // Garantir que o botão de menu móvel está visível
+          const menuButton = document.getElementById('menu-toggle');
+          if (menuButton) {
+            menuButton.style.display = 'flex';
+            menuButton.style.position = 'fixed';
+            menuButton.style.bottom = '20px';
+            menuButton.style.right = '20px';
+            menuButton.style.zIndex = '9999';
+          }
+        }, 1000);
+      });
+    </script>
 </head>
 <body>
 
@@ -19,7 +43,7 @@
         <li><a href="buscar_ctacontrato.html"><i data-lucide="file-text"></i> <span class="nav-text">Por Cta. Contrato</span></a></li>
         <li><a href="buscar_numero_serie.html"><i data-lucide="barcode"></i> <span class="nav-text">Por N° de Série</span></a></li>
         <li><a href="buscar_poste.html"><i data-lucide="lightbulb"></i> <span class="nav-text">Por N° do Poste</span></a></li>
-        <li><a href=""><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
+        <li><a href="buscar_nome.html"><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
         <li><a href="importar_clientes.html"><i data-lucide="upload-cloud"></i> <span class="nav-text">Importar Clientes</span></a></li>
     </ul>
 </nav>
@@ -33,13 +57,137 @@
     </header>
 
     <main class="main-content">
-        <div class="container">
-            <h1>Bem-vindo à Central de Busca</h1>
-            <p>Utilize o menu lateral para navegar entre as funcionalidades do sistema.</p>
+        <div class="container" style="max-width: 1200px;">
+            <h1>Dashboard Sipel</h1>
+            <p>Bem-vindo à Central de Busca. Veja as estatísticas do sistema abaixo:</p>
+
+            <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+                <!-- Card 1: Total de Clientes - Principal KPI -->
+                <div class="dashboard-card" style="grid-column: 1 / -1;">
+                    <div class="dashboard-card-header">
+                        <div class="dashboard-card-title">Total de Clientes</div>
+                        <div class="dashboard-card-icon">
+                            <i data-lucide="users"></i>
+                        </div>
+                    </div>
+                    <div class="dashboard-card-content">
+                        <div id="total-clientes" class="dashboard-metric" style="font-size: 3rem;">—</div>
+                        <div class="dashboard-label">Clientes registrados no sistema</div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Links Rápidos -->
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <div class="dashboard-card-title">Links Rápidos</div>
+                        <div class="dashboard-card-icon">
+                            <i data-lucide="link"></i>
+                        </div>
+                    </div>
+                    <div class="dashboard-card-content" style="text-align: left;">
+                        <ul style="list-style: none; padding: 0;">
+                            <li style="margin-bottom: 15px;"><a href="buscar_instalacao.html" style="color: var(--cor-primaria); text-decoration: none; display: flex; align-items: center; font-size: 1.1rem;"><i data-lucide="building-2" style="margin-right: 10px; width: 24px; height: 24px;"></i> Buscar por Instalação</a></li>
+                            <li style="margin-bottom: 15px;"><a href="buscar_poste.html" style="color: var(--cor-primaria); text-decoration: none; display: flex; align-items: center; font-size: 1.1rem;"><i data-lucide="lightbulb" style="margin-right: 10px; width: 24px; height: 24px;"></i> Buscar por Poste</a></li>
+                            <li style="margin-bottom: 15px;"><a href="buscar_nome.html" style="color: var(--cor-primaria); text-decoration: none; display: flex; align-items: center; font-size: 1.1rem;"><i data-lucide="user" style="margin-right: 10px; width: 24px; height: 24px;"></i> Buscar por Nome</a></li>
+                            <li style="margin-bottom: 15px;"><a href="buscar_numero_serie.html" style="color: var(--cor-primaria); text-decoration: none; display: flex; align-items: center; font-size: 1.1rem;"><i data-lucide="barcode" style="margin-right: 10px; width: 24px; height: 24px;"></i> Buscar por N° de Série</a></li>
+                            <li style="margin-bottom: 15px;"><a href="importar_clientes.html" style="color: var(--cor-primaria); text-decoration: none; display: flex; align-items: center; font-size: 1.1rem;"><i data-lucide="upload-cloud" style="margin-right: 10px; width: 24px; height: 24px;"></i> Importar Clientes</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Card 3: Ajuda rápida -->
+                <div class="dashboard-card">
+                    <div class="dashboard-card-header">
+                        <div class="dashboard-card-title">Ajuda Rápida</div>
+                        <div class="dashboard-card-icon">
+                            <i data-lucide="help-circle"></i>
+                        </div>
+                    </div>
+                    <div class="dashboard-card-content" style="text-align: left;">
+                        <p><strong>Como usar o sistema:</strong></p>
+                        <ol style="padding-left: 20px;">
+                            <li style="margin-bottom: 10px;">Selecione um dos métodos de busca disponíveis no menu lateral ou nos links rápidos</li>
+                            <li style="margin-bottom: 10px;">Digite o termo de busca solicitado (número de instalação, poste, etc.)</li>
+                            <li style="margin-bottom: 10px;">Clique em "Ver no Google Maps" para localizar o cliente</li>
+                        </ol>
+                        <p style="margin-top: 15px;"><strong>Dica:</strong> Use o botão <i data-lucide="menu" style="width: 16px; height: 16px; vertical-align: middle;"></i> para abrir o menu em dispositivos móveis. <a href="dica_menu.html" style="display: inline-block; margin-top: 5px; color: #102A83; text-decoration: underline;">Ver como</a></p>
+                        <p style="margin-top: 10px;"><strong>Problemas com a interface?</strong> <a href="botoes.html" style="color: #102A83; text-decoration: underline;">Aprenda a usar os botões</a></p>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 </div>
 
 <script src="assets/layout.js"></script>
+<script>
+    // Inicializar a aplicação quando a página carregar
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('Página carregada, inicializando aplicação...');
+
+        // Garantir que os ícones são inicializados
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+            console.log('Ícones inicializados');
+        }
+
+        // Inicializa o dashboard com dados reais do backend
+        inicializarDashboard();
+
+        // Configuração explícita do botão de menu móvel
+        const menuButton = document.getElementById('menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+
+        if (menuButton && sidebar) {
+            console.log('Configurando botão de menu móvel');
+
+            // Adicionar evento diretamente aqui para garantir
+            menuButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Botão de menu clicado!!');
+
+                // Verificar se estamos em dispositivo móvel
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.toggle('mobile-open');
+                    console.log('Menu móvel alternado: ' + (sidebar.classList.contains('mobile-open') ? 'aberto' : 'fechado'));
+
+                    // Ativar overlay
+                    const overlay = document.querySelector('.mobile-nav-overlay');
+                    if (overlay) overlay.classList.toggle('active');
+                }
+            });
+
+            // Garantir visibilidade
+            menuButton.style.display = 'flex';
+            menuButton.style.opacity = '1';
+        } else {
+            console.error('Botão de menu ou sidebar não encontrados!');
+        }
+
+        // Configurar botão de tema
+        const themeToggle = document.getElementById('theme-toggle');
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                document.body.classList.toggle('dark-mode');
+                console.log('Tema alterado para: ' + (isDarkMode ? 'claro' : 'escuro'));
+
+                // Atualizar ícones
+                const sunIcon = themeToggle.querySelector('[data-lucide="sun"]');
+                const moonIcon = themeToggle.querySelector('[data-lucide="moon"]');
+
+                if (sunIcon && moonIcon) {
+                    if (document.body.classList.contains('dark-mode')) {
+                        sunIcon.style.display = 'none';
+                        moonIcon.style.display = 'block';
+                    } else {
+                        sunIcon.style.display = 'block';
+                        moonIcon.style.display = 'none';
+                    }
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>

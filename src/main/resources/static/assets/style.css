@@ -30,9 +30,33 @@ body.dark-mode {
     --sombra-caixa: 0 4px 15px rgba(0, 0, 0, 0.2);
 
     /* Cores da Barra de Navegação no modo escuro */
-    --nav-fundo: #041248;
+    --nav-fundo: #0a0a0a;
     --nav-texto: #e0e0e0;
     --nav-fundo-ativo: var(--cor-primaria);
+
+    /* Forçar cores escuras (redundância para garantir) */
+    background-color: #121212 !important;
+    color: #e0e0e0 !important;
+}
+
+/* Regras específicas para garantir a aplicação do tema escuro */
+body.dark-mode .container,
+body.dark-mode .dashboard-card,
+body.dark-mode .page-header {
+    background-color: var(--cor-fundo-secundario) !important;
+    color: var(--cor-texto) !important;
+}
+
+body.dark-mode .sidebar {
+    background-color: var(--nav-fundo) !important;
+}
+
+body.dark-mode input[type="text"],
+body.dark-mode input[type="number"],
+body.dark-mode input[type="file"] {
+    background-color: #2c2c2c !important;
+    color: #e0e0e0 !important;
+    border-color: #444 !important;
 }
 
 /* --- ESTILOS GERAIS --- */
@@ -159,6 +183,26 @@ body.nav-collapsed .page-wrapper {
     cursor: pointer;
     padding: 8px;
     margin-left: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.header-controls button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Garantir que o botão de menu seja bem visível */
+#menu-toggle {
+    cursor: pointer;
+    background-color: var(--cor-primaria) !important;
+    color: white !important;
+    border: none;
+    outline: none;
+    z-index: 9999;
 }
 
 .main-content {

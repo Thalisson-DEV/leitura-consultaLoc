@@ -1,5 +1,6 @@
 package br.sipel.leituraconsultaloc.service;
 
+import br.sipel.leituraconsultaloc.dto.EstatisticasDTO;
 import br.sipel.leituraconsultaloc.exception.ResourceNotFoundException;
 import br.sipel.leituraconsultaloc.model.Cliente;
 import br.sipel.leituraconsultaloc.repositories.ClienteRepository;
@@ -136,5 +137,18 @@ public class ClienteService {
 
         // 3. Se a lista não estiver vazia, retorna apenas o primeiro elemento.
         return clientesEncontrados.get(0);
+    }
+
+    /**
+     * Obtém estatísticas gerais do sistema para exibição no dashboard
+     * @return Objeto com as estatísticas calculadas
+     */
+    public EstatisticasDTO obterEstatisticas() {
+        // Contagem total de clientes no sistema
+        long totalClientes = clienteRepository.count();
+
+        return EstatisticasDTO.builder()
+                .totalClientes(totalClientes)
+                .build();
     }
 }
