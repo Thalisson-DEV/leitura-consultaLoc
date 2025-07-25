@@ -66,10 +66,8 @@
       if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
         window.location.href = url;
       } else {
-        // Se for um erro, lemos a mensagem JSON e mostramos a notificação.
         const errorData = await response.json();
         showNotification(errorData.message || 'Ocorreu um erro.', 'error');
-        // A lógica de redirecionamento que estava aqui foi removida.
       }
 
     } catch (err) {
