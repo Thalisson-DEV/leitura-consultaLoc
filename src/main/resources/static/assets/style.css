@@ -1,6 +1,7 @@
 /* --- VARIAVEIS DE COR E DESIGN --- */
 :root {
     --cor-primaria: #102a83;
+    --cor-primariaescuro: #bbcaff;
     --cor-primaria-hover: #1b42b8;
     --cor-erro: #e63946;
     --cor-sucesso: #2a9d8f;
@@ -24,19 +25,17 @@ body.dark-mode {
     /* Tema Escuro */
     --cor-fundo: #121212;
     --cor-fundo-secundario: #1e1e1e;
-    --cor-texto: #e0e0e0;
-    --cor-texto-suave: #adb5bd;
-    --cor-borda: #495057;
-    --sombra-caixa: 0 4px 15px rgba(0, 0, 0, 0.2);
+    --cor-texto: #f8f9fa; /* antes era #e0e0e0 */
+    --cor-texto-suave: #cccccc; /* antes era #adb5bd */
+    --cor-borda: #6c757d;
+    --sombra-caixa: 0 4px 15px rgba(0, 0, 0, 0.3);
 
-    /* Cores da Barra de Navegação no modo escuro */
     --nav-fundo: #0a0a0a;
-    --nav-texto: #e0e0e0;
+    --nav-texto: #f1f1f1;
     --nav-fundo-ativo: var(--cor-primaria);
 
-    /* Forçar cores escuras (redundância para garantir) */
     background-color: #121212 !important;
-    color: #e0e0e0 !important;
+    color: var(--cor-texto) !important;
 }
 
 /* Regras específicas para garantir a aplicação do tema escuro */
@@ -58,6 +57,20 @@ body.dark-mode input[type="file"] {
     color: #e0e0e0 !important;
     border-color: #444 !important;
 }
+
+body.dark-mode i,
+body.dark-mode [data-lucide],
+body.dark-mode .dashboard-card-title,
+body.dark-mode .dashboard-metric,
+body.dark-mode .dashboard-label,
+body.dark-mode a {
+    color: var(--cor-texto) !important;
+}
+
+body.dark-mode a:hover {
+    color: var(--cor-primaria-hover) !important;
+}
+
 
 /* --- ESTILOS GERAIS --- */
 * {

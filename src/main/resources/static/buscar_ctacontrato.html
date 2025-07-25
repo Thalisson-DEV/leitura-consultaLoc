@@ -6,6 +6,27 @@
   <title>Buscar por Conta Contrato</title>
   <link rel="stylesheet" href="assets/style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    // Garantir que os ícones Lucide serão carregados mesmo com conexões lentas
+    window.addEventListener('load', function() {
+      // Verificar se todos os ícones foram carregados
+      setTimeout(function() {
+        if (typeof lucide !== 'undefined') {
+          lucide.createIcons();
+        }
+
+        // Garantir que o botão de menu móvel está visível
+        const menuButton = document.getElementById('menu-toggle');
+        if (menuButton) {
+          menuButton.style.display = 'flex';
+          menuButton.style.position = 'fixed';
+          menuButton.style.bottom = '20px';
+          menuButton.style.right = '20px';
+          menuButton.style.zIndex = '9999';
+        }
+      }, 1000);
+    });
+  </script>
 </head>
 <body>
 
