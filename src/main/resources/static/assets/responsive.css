@@ -22,6 +22,22 @@
     display: block !important;
   }
 
+  /*
+  ==============================================
+  CORREÇÃO: Garante que o texto do menu não desapareça no mobile
+  ==============================================
+  */
+  .sidebar.collapsed {
+    width: 260px; /* Força a largura total do menu no mobile */
+  }
+  .sidebar.collapsed .nav-text {
+    opacity: 1 !important; /* Garante que o texto seja sempre visível */
+    visibility: visible !important;
+    display: inline !important; /* Garante que o texto seja exibido */
+  }
+  /* Fim da Correção */
+
+
   .page-wrapper {
     margin-left: 0;
     width: 100%;
