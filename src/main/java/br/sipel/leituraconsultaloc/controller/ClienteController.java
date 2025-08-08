@@ -1,5 +1,6 @@
 package br.sipel.leituraconsultaloc.controller;
 
+import br.sipel.leituraconsultaloc.dto.ImportacaoResponseDTO;
 import br.sipel.leituraconsultaloc.model.Cliente;
 import br.sipel.leituraconsultaloc.service.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
+import java.util.List;
 
 /**
  * Controller para gerir as operações relacionadas aos Clientes.
@@ -31,14 +33,24 @@ public class ClienteController {
      * @return Uma resposta com status 200 (OK) e uma mensagem de sucesso ou 500 em caso de erro.
      */
     @PostMapping("/importar/csv")
-    public ResponseEntity<String> importarClientes(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ImportacaoResponseDTO> importarClientes(@RequestParam("file") MultipartFile file) {
         try {
-            long totalRegistros = clienteService.importarCsvEmLotes(file);
-            return ResponseEntity.ok("Importação realizada com sucesso! Total de registros no sistema: " + totalRegistros);
+            ImportacaoResponseDTO resultado = clienteService.importarClientes(file);
+            return ResponseEntity.ok(resultado);
         } catch (Exception e) {
-            // O GlobalExceptionHandler pode pegar isso, mas um catch aqui é bom para erros de I/O.
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao processar o arquivo CSV: " + e.getMessage());
+            System.out.println("Erro na importação de obras: " + e.getMessage());
+            e.printStackTrace();
+
+            String mensagemErro = "Erro ao processar o arquivo: ";
+            if (e.getMessage().contains("formato") || e.getMessage().contains("inválido")) {
+                mensagemErro = "O arquivo está em formato inválido. Por favor, utilize o modelo correto.";
+            } else if (e.getMessage().contains("vazio")) {
+                mensagemErro = "O arquivo enviado está vazio. Por favor, verifique e tente novamente.";
+            } else {
+                mensagemErro += e.getMessage();
+            }
+
+            return ResponseEntity.badRequest().body(new ImportacaoResponseDTO(0, 0, List.of(mensagemErro)));
         }
     }
 

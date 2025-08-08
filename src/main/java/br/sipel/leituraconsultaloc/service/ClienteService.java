@@ -1,17 +1,21 @@
 package br.sipel.leituraconsultaloc.service;
 
 import br.sipel.leituraconsultaloc.dto.EstatisticasDTO;
+import br.sipel.leituraconsultaloc.dto.ImportacaoResponseDTO;
 import br.sipel.leituraconsultaloc.exception.ResourceNotFoundException;
 import br.sipel.leituraconsultaloc.model.Cliente;
 import br.sipel.leituraconsultaloc.repositories.ClienteRepository;
+import jakarta.validation.constraints.NotNull;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 @Service
@@ -23,50 +27,90 @@ public class ClienteService {
         this.clienteRepository = clienteRepository;
     }
 
-    // AJUSTE: Mude o retorno de void para long
-    public long importarCsvEmLotes(MultipartFile file) throws IOException {
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-
-            String linha;
-            boolean primeiraLinha = true;
-            List<Cliente> lote = new ArrayList<>();
-            final int TAMANHO_LOTE = 1000;
-
-            while ((linha = reader.readLine()) != null) {
-                if (primeiraLinha) {
-                    primeiraLinha = false;
-                    continue;
-                }
-
-                String[] campos = linha.split(",");
-                if (campos.length < 7) {
-                    continue;
-                }
-
-                Cliente cliente = new Cliente();
-                cliente.setIdInstalacao(Long.parseLong(campos[0].trim()));
-                cliente.setContaContrato(campos[1].trim());
-                cliente.setNumeroSerie(campos[2].trim());
-                cliente.setNumeroPoste(campos[3].trim());
-                cliente.setNomeCliente(campos[4].trim());
-                cliente.setLongitude(Double.parseDouble(campos[5].trim()));
-                cliente.setLatitude(Double.parseDouble(campos[6].trim()));
-
-                lote.add(cliente);
-
-                if (lote.size() == TAMANHO_LOTE) {
-                    clienteRepository.saveAll(lote);
-                    lote.clear();
-                }
-            }
-
-            if (!lote.isEmpty()) {
-                clienteRepository.saveAll(lote);
-            }
+    public ImportacaoResponseDTO importarClientes(@NotNull MultipartFile file) {
+        if (file.isEmpty()) {
+            System.out.println("DEBUG: O arquivo enviado está vazio.");
+            throw new RuntimeException("O arquivo enviado está vazio.");
         }
-        // AJUSTE: Retorne a contagem total de registros
-        return clienteRepository.count();
+
+        System.out.println("DEBUG: Iniciando processamento do arquivo: " + file.getOriginalFilename());
+        List<Cliente> clienteParaSalvar = new ArrayList<>();
+        List<String> erros = new ArrayList<>();
+        int linhaAtual = 1;
+
+        try (InputStream inputStream = file.getInputStream()) {
+            Workbook workbook = new XSSFWorkbook(inputStream);
+            Sheet sheet = workbook.getSheetAt(0);
+            Iterator<Row> rows = sheet.iterator();
+
+            if (rows.hasNext()) {
+                rows.next(); // Pula o cabeçalho
+            }
+
+            if (!rows.hasNext()) {
+                System.out.println("DEBUG: O arquivo não contém linhas de dados após o cabeçalho.");
+            }
+
+            while (rows.hasNext()) {
+                Row currentRow = rows.next();
+                linhaAtual++;
+
+                // Se estiver, considera a linha como vazia e pula para a próxima.
+                String idInstalacao = getStringCellValue(currentRow.getCell(0));
+                if (idInstalacao == null || idInstalacao.trim().isEmpty()) {
+                    continue;
+                }
+
+                try {
+                    String contaContrato = getStringCellValue(currentRow.getCell(2));
+                    String numeroSerie = getStringCellValue(currentRow.getCell(3));
+                    String numeroPoste = getStringCellValue(currentRow.getCell(4));
+                    String nomeCliente = getStringCellValue(currentRow.getCell(5));
+                    String longitude = getStringCellValue(currentRow.getCell(6));
+                    String latitude = getStringCellValue(currentRow.getCell(6));
+
+
+                    if (clienteRepository.findByIdInstalacao(Long.valueOf(idInstalacao)).isPresent()) {
+                        throw new RuntimeException("Codigo de material já cadastrado.");
+                    }
+
+                    Cliente novoCliente = new Cliente();
+                    novoCliente.setIdInstalacao(Long.valueOf(idInstalacao));
+                    novoCliente.setContaContrato(contaContrato);
+                    novoCliente.setNumeroSerie(numeroSerie);
+                    novoCliente.setNumeroPoste(numeroPoste);
+                    novoCliente.setNomeCliente(nomeCliente);
+                    novoCliente.setLatitude(Double.parseDouble(latitude));
+                    novoCliente.setLongitude(Double.parseDouble(longitude));
+
+                    clienteParaSalvar.add(novoCliente);
+
+                } catch (Exception e) {
+                    System.out.println("DEBUG: ERRO na linha " + linhaAtual + ": " + e.getMessage());
+                    erros.add("Linha " + linhaAtual + ": " + e.getMessage());
+                }
+            }
+            workbook.close();
+        } catch (Exception e) {
+            throw new RuntimeException("Falha ao ler o arquivo Excel: " + e.getMessage());
+        }
+
+        if (!clienteParaSalvar.isEmpty()) {
+            clienteRepository.saveAll(clienteParaSalvar);
+        }
+        return new ImportacaoResponseDTO(clienteParaSalvar.size(), erros.size(), erros);
+    }
+
+    private String getStringCellValue(Cell cell) {
+        if (cell == null) return "";
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue().trim();
+            case NUMERIC:
+                return String.valueOf((long) cell.getNumericCellValue());
+            default:
+                return "";
+        }
     }
 
     /**
