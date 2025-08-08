@@ -1,6 +1,8 @@
 package br.sipel.leituraconsultaloc.controller;
 
 import br.sipel.leituraconsultaloc.dto.ImportacaoResponseDTO;
+import br.sipel.leituraconsultaloc.infra.config.ImportJobService;
+import br.sipel.leituraconsultaloc.infra.config.ImportJobStatus;
 import br.sipel.leituraconsultaloc.model.Cliente;
 import br.sipel.leituraconsultaloc.service.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,9 +11,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller para gerir as operações relacionadas aos Clientes.
@@ -26,32 +39,40 @@ public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
+    private final ImportJobService jobService;
 
-    /**
-     * Endpoint para importar clientes a partir de um arquivo CSV.
-     * @param file O arquivo CSV enviado na requisição.
-     * @return Uma resposta com status 200 (OK) e uma mensagem de sucesso ou 500 em caso de erro.
-     */
-    @PostMapping("/importar/csv")
-    public ResponseEntity<ImportacaoResponseDTO> importarClientes(@RequestParam("file") MultipartFile file) {
-        try {
-            ImportacaoResponseDTO resultado = clienteService.importarClientes(file);
-            return ResponseEntity.ok(resultado);
-        } catch (Exception e) {
-            System.out.println("Erro na importação de obras: " + e.getMessage());
-            e.printStackTrace();
+    public ClienteController(ImportJobService jobService) {
+        this.jobService = jobService;
+    }
 
-            String mensagemErro = "Erro ao processar o arquivo: ";
-            if (e.getMessage().contains("formato") || e.getMessage().contains("inválido")) {
-                mensagemErro = "O arquivo está em formato inválido. Por favor, utilize o modelo correto.";
-            } else if (e.getMessage().contains("vazio")) {
-                mensagemErro = "O arquivo enviado está vazio. Por favor, verifique e tente novamente.";
-            } else {
-                mensagemErro += e.getMessage();
-            }
-
-            return ResponseEntity.badRequest().body(new ImportacaoResponseDTO(0, 0, List.of(mensagemErro)));
+    @PostMapping("/importar-async")
+    public ResponseEntity<?> importarAsync(@RequestParam("file") MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body("Arquivo vazio");
         }
+
+        ImportJobStatus job = jobService.createJob();
+
+        // Salva temporariamente o arquivo (pode ser no disco ou em storage)
+        Path uploadDir = Paths.get(System.getProperty("app.upload.dir", "/tmp/uploads"));
+        Files.createDirectories(uploadDir);
+        Path tempFile = uploadDir.resolve(job.getJobId() + "-" + file.getOriginalFilename());
+        try (InputStream is = file.getInputStream()) {
+            Files.copy(is, tempFile, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        // dispara processamento assíncrono
+        clienteService.processarArquivoAsync(tempFile.toString(), job.getJobId());
+
+        // retorna jobId para o cliente
+        return ResponseEntity.accepted().body(Map.of("jobId", job.getJobId()));
+    }
+
+    @GetMapping("/import/status/{jobId}")
+    public ResponseEntity<?> status(@PathVariable String jobId) {
+        ImportJobStatus job = jobService.getJob(jobId);
+        if (job == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(job);
     }
 
     /**

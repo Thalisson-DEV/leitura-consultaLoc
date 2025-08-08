@@ -3,17 +3,24 @@ package br.sipel.leituraconsultaloc.service;
 import br.sipel.leituraconsultaloc.dto.EstatisticasDTO;
 import br.sipel.leituraconsultaloc.dto.ImportacaoResponseDTO;
 import br.sipel.leituraconsultaloc.exception.ResourceNotFoundException;
+import br.sipel.leituraconsultaloc.infra.config.ExcelHelper;
+import br.sipel.leituraconsultaloc.infra.config.ImportJobService;
+import br.sipel.leituraconsultaloc.infra.config.ImportJobStatus;
 import br.sipel.leituraconsultaloc.model.Cliente;
 import br.sipel.leituraconsultaloc.repositories.ClienteRepository;
+import com.monitorjbl.xlsx.StreamingReader;
 import jakarta.validation.constraints.NotNull;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -22,9 +29,151 @@ import java.util.List;
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
+    private final ImportJobService jobService;
+    private static final int BATCH_SIZE = 1000;
+    private static final int MAX_ERRORS_TO_KEEP = 100;
 
-    public ClienteService(ClienteRepository clienteRepository) {
+    public ClienteService(ClienteRepository clienteRepository, ImportJobService jobService) {
         this.clienteRepository = clienteRepository;
+        this.jobService = jobService;
+    }
+
+    @Async("importExecutor")
+    public void processarArquivoAsync(String filePath, String jobId) {
+        ImportJobStatus job = jobService.getJob(jobId);
+        if (job == null) return;
+
+        job.setStatus(ImportJobStatus.Status.RUNNING);
+        job.setStartedAt(Instant.now());
+
+        List<Cliente> batch = new ArrayList<>(BATCH_SIZE);
+        try (InputStream is = new FileInputStream(filePath)) {
+            Workbook workbook = StreamingReader.builder()
+                    .rowCacheSize(100)    // número de linhas em memória por sheet
+                    .bufferSize(4096)     // stream buffer
+                    .open(is);
+
+            Sheet sheet = workbook.getSheetAt(0);
+            boolean firstRow = true;
+
+            for (Row row : sheet) {
+                if (firstRow) { firstRow = false; continue; } // pula cabeçalho
+                job.setProcessed(job.getProcessed() + 1);
+                job.setTotalLines(job.getTotalLines() + 1);
+
+                try {
+                    // leitura segura das células (adaptar índices)
+                    String idInstalacaoStr = getStringCellValue(row.getCell(0));
+                    if (idInstalacaoStr == null || idInstalacaoStr.isBlank()) {
+                        continue;
+                    }
+                    long idInst = Long.parseLong(idInstalacaoStr);
+
+                    if (clienteRepository.findByIdInstalacao(idInst).isPresent()) {
+                        recordError(job, "Linha " + (job.getProcessed()+1) + ": ID já cadastrado");
+                        continue;
+                    }
+
+                    Cliente c = new Cliente();
+                    c.setIdInstalacao(idInst);
+                    c.setContaContrato(getStringCellValue(row.getCell(2)));
+                    c.setNumeroSerie(getStringCellValue(row.getCell(3)));
+                    c.setNumeroPoste(getStringCellValue(row.getCell(4)));
+                    c.setNomeCliente(getStringCellValue(row.getCell(5)));
+                    c.setLongitude(ExcelHelper.parseDoubleSafe(row.getCell(6)));
+                    c.setLatitude(ExcelHelper.parseDoubleSafe(row.getCell(7)));
+
+                    batch.add(c);
+
+                    if (batch.size() >= BATCH_SIZE) {
+                        clienteRepository.saveAll(batch);
+                        job.setSuccess(job.getSuccess() + batch.size());
+                        batch.clear();
+                    }
+
+                } catch (Exception e) {
+                    recordError(job, "Linha " + (job.getProcessed()+1) + ": " + e.getMessage());
+                    // não para o processamento
+                }
+            }
+
+            // salva resto do batch
+            if (!batch.isEmpty()) {
+                clienteRepository.saveAll(batch);
+                job.setSuccess(job.getSuccess() + batch.size());
+                batch.clear();
+            }
+
+            job.setStatus(ImportJobStatus.Status.COMPLETED);
+            job.setFinishedAt(Instant.now());
+
+        } catch (Exception e) {
+            job.setStatus(ImportJobStatus.Status.FAILED);
+            job.setMessage(e.getMessage());
+            job.setFinishedAt(Instant.now());
+        } finally {
+            // opcional: deletar o arquivo temporário
+            try { Files.deleteIfExists(Paths.get(filePath)); } catch (Exception ignore) {}
+        }
+    }
+
+    private void recordError(ImportJobStatus job, String mensagem) {
+        job.setErrors(job.getErrors() + 1);
+        if (job.getSampleErrors().size() < MAX_ERRORS_TO_KEEP) {
+            job.getSampleErrors().add(mensagem);
+        }
+    }
+
+    // Lê uma célula como String, tratando nulos e tipos diferentes
+    public static String getStringCellValue(Cell cell) {
+        if (cell == null) {
+            return "";
+        }
+
+        if (cell.getCellType() == CellType.STRING) {
+            return cell.getStringCellValue().trim();
+        } else if (cell.getCellType() == CellType.NUMERIC) {
+            // Se for número, converte para String removendo .0 se for inteiro
+            double val = cell.getNumericCellValue();
+            if (val == (long) val) {
+                return String.valueOf((long) val);
+            }
+            return String.valueOf(val);
+        } else if (cell.getCellType() == CellType.BOOLEAN) {
+            return String.valueOf(cell.getBooleanCellValue());
+        } else if (cell.getCellType() == CellType.FORMULA) {
+            try {
+                return cell.getStringCellValue().trim();
+            } catch (IllegalStateException e) {
+                try {
+                    double val = cell.getNumericCellValue();
+                    return String.valueOf(val);
+                } catch (Exception ex) {
+                    return "";
+                }
+            }
+        }
+
+        return "";
+    }
+
+    // Converte para Double de forma segura
+    public static Double parseDoubleSafe(Cell cell) {
+        if (cell == null) {
+            return null;
+        }
+
+        try {
+            if (cell.getCellType() == CellType.NUMERIC) {
+                return cell.getNumericCellValue();
+            } else {
+                String str = getStringCellValue(cell);
+                if (str.isEmpty()) return null;
+                return Double.parseDouble(str.replace(",", "."));
+            }
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     public ImportacaoResponseDTO importarClientes(@NotNull MultipartFile file) {
@@ -107,18 +256,6 @@ public class ClienteService {
         }
 
         return new ImportacaoResponseDTO(clientesParaSalvar.size(), erros.size(), erros);
-    }
-
-    private String getStringCellValue(Cell cell) {
-        if (cell == null) return "";
-        switch (cell.getCellType()) {
-            case STRING:
-                return cell.getStringCellValue().trim();
-            case NUMERIC:
-                return String.valueOf((long) cell.getNumericCellValue());
-            default:
-                return "";
-        }
     }
 
     /**
