@@ -47,22 +47,25 @@ public class ClienteService {
         job.setStartedAt(Instant.now());
 
         List<Cliente> batch = new ArrayList<>(BATCH_SIZE);
+
         try (InputStream is = new FileInputStream(filePath)) {
             Workbook workbook = StreamingReader.builder()
-                    .rowCacheSize(100)    // número de linhas em memória por sheet
-                    .bufferSize(4096)     // stream buffer
+                    .rowCacheSize(100)
+                    .bufferSize(4096)
                     .open(is);
 
             Sheet sheet = workbook.getSheetAt(0);
             boolean firstRow = true;
 
             for (Row row : sheet) {
-                if (firstRow) { firstRow = false; continue; } // pula cabeçalho
+                if (firstRow) {
+                    firstRow = false;
+                    continue; // pula cabeçalho
+                }
                 job.setProcessed(job.getProcessed() + 1);
                 job.setTotalLines(job.getTotalLines() + 1);
 
                 try {
-                    // leitura segura das células (adaptar índices)
                     String idInstalacaoStr = getStringCellValue(row.getCell(0));
                     if (idInstalacaoStr == null || idInstalacaoStr.isBlank()) {
                         continue;
@@ -70,7 +73,7 @@ public class ClienteService {
                     long idInst = Long.parseLong(idInstalacaoStr);
 
                     if (clienteRepository.findByIdInstalacao(idInst).isPresent()) {
-                        recordError(job, "Linha " + (job.getProcessed()+1) + ": ID já cadastrado");
+                        recordError(job, "Linha " + (job.getProcessed()) + ": ID já cadastrado");
                         continue;
                     }
 
@@ -80,8 +83,8 @@ public class ClienteService {
                     c.setNumeroSerie(getStringCellValue(row.getCell(3)));
                     c.setNumeroPoste(getStringCellValue(row.getCell(4)));
                     c.setNomeCliente(getStringCellValue(row.getCell(5)));
-                    c.setLongitude(ExcelHelper.parseDoubleSafe(row.getCell(6)));
-                    c.setLatitude(ExcelHelper.parseDoubleSafe(row.getCell(7)));
+                    c.setLongitude(parseDoubleSafe(row.getCell(6)));
+                    c.setLatitude(parseDoubleSafe(row.getCell(7)));
 
                     batch.add(c);
 
@@ -92,30 +95,34 @@ public class ClienteService {
                     }
 
                 } catch (Exception e) {
-                    recordError(job, "Linha " + (job.getProcessed()+1) + ": " + e.getMessage());
-                    // não para o processamento
+                    recordError(job, "Linha " + (job.getProcessed()) + ": " + e.getMessage());
                 }
             }
 
-            // salva resto do batch
+            // Salva qualquer batch restante
             if (!batch.isEmpty()) {
                 clienteRepository.saveAll(batch);
                 job.setSuccess(job.getSuccess() + batch.size());
-                batch.clear();
             }
 
             job.setStatus(ImportJobStatus.Status.COMPLETED);
             job.setFinishedAt(Instant.now());
+            workbook.close();
 
         } catch (Exception e) {
             job.setStatus(ImportJobStatus.Status.FAILED);
             job.setMessage(e.getMessage());
             job.setFinishedAt(Instant.now());
+            // Log para você visualizar no console
+            e.printStackTrace();
         } finally {
-            // opcional: deletar o arquivo temporário
-            try { Files.deleteIfExists(Paths.get(filePath)); } catch (Exception ignore) {}
+            try {
+                Files.deleteIfExists(Paths.get(filePath));
+            } catch (Exception ignore) {
+            }
         }
     }
+
 
     private void recordError(ImportJobStatus job, String mensagem) {
         job.setErrors(job.getErrors() + 1);
