@@ -29,76 +29,84 @@ public class ClienteService {
 
     public ImportacaoResponseDTO importarClientes(@NotNull MultipartFile file) {
         if (file.isEmpty()) {
-            System.out.println("DEBUG: O arquivo enviado está vazio.");
             throw new RuntimeException("O arquivo enviado está vazio.");
         }
 
-        System.out.println("DEBUG: Iniciando processamento do arquivo: " + file.getOriginalFilename());
-        List<Cliente> clienteParaSalvar = new ArrayList<>();
+        List<Cliente> clientesParaSalvar = new ArrayList<>();
         List<String> erros = new ArrayList<>();
         int linhaAtual = 1;
 
-        try (InputStream inputStream = file.getInputStream()) {
-            Workbook workbook = new XSSFWorkbook(inputStream);
+        try (InputStream inputStream = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(inputStream)) {
+
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
 
             if (rows.hasNext()) {
-                rows.next(); // Pula o cabeçalho
-            }
-
-            if (!rows.hasNext()) {
-                System.out.println("DEBUG: O arquivo não contém linhas de dados após o cabeçalho.");
+                rows.next(); // pula cabeçalho
             }
 
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
                 linhaAtual++;
 
-                // Se estiver, considera a linha como vazia e pula para a próxima.
-                String idInstalacao = getStringCellValue(currentRow.getCell(0));
-                if (idInstalacao == null || idInstalacao.trim().isEmpty()) {
-                    continue;
-                }
-
                 try {
+                    String idInstalacaoStr = getStringCellValue(currentRow.getCell(0));
+                    if (idInstalacaoStr.isBlank()) {
+                        continue; // pula linhas vazias
+                    }
+
+                    Long idInstalacao;
+                    try {
+                        idInstalacao = Long.valueOf(idInstalacaoStr);
+                    } catch (NumberFormatException e) {
+                        throw new RuntimeException("ID de instalação inválido");
+                    }
+
+                    if (clienteRepository.findByIdInstalacao(idInstalacao).isPresent()) {
+                        throw new RuntimeException("ID de instalação já cadastrado");
+                    }
+
                     String contaContrato = getStringCellValue(currentRow.getCell(2));
                     String numeroSerie = getStringCellValue(currentRow.getCell(3));
                     String numeroPoste = getStringCellValue(currentRow.getCell(4));
                     String nomeCliente = getStringCellValue(currentRow.getCell(5));
-                    String longitude = getStringCellValue(currentRow.getCell(6));
-                    String latitude = getStringCellValue(currentRow.getCell(6));
+                    String longitudeStr = getStringCellValue(currentRow.getCell(6));
+                    String latitudeStr = getStringCellValue(currentRow.getCell(7));
 
-
-                    if (clienteRepository.findByIdInstalacao(Long.valueOf(idInstalacao)).isPresent()) {
-                        throw new RuntimeException("Codigo de material já cadastrado.");
+                    Double longitude, latitude;
+                    try {
+                        longitude = Double.parseDouble(longitudeStr);
+                        latitude = Double.parseDouble(latitudeStr);
+                    } catch (NumberFormatException e) {
+                        throw new RuntimeException("Coordenadas inválidas");
                     }
 
                     Cliente novoCliente = new Cliente();
-                    novoCliente.setIdInstalacao(Long.valueOf(idInstalacao));
+                    novoCliente.setIdInstalacao(idInstalacao);
                     novoCliente.setContaContrato(contaContrato);
                     novoCliente.setNumeroSerie(numeroSerie);
                     novoCliente.setNumeroPoste(numeroPoste);
                     novoCliente.setNomeCliente(nomeCliente);
-                    novoCliente.setLatitude(Double.parseDouble(latitude));
-                    novoCliente.setLongitude(Double.parseDouble(longitude));
+                    novoCliente.setLongitude(longitude);
+                    novoCliente.setLatitude(latitude);
 
-                    clienteParaSalvar.add(novoCliente);
+                    clientesParaSalvar.add(novoCliente);
 
                 } catch (Exception e) {
-                    System.out.println("DEBUG: ERRO na linha " + linhaAtual + ": " + e.getMessage());
                     erros.add("Linha " + linhaAtual + ": " + e.getMessage());
                 }
             }
-            workbook.close();
+
         } catch (Exception e) {
             throw new RuntimeException("Falha ao ler o arquivo Excel: " + e.getMessage());
         }
 
-        if (!clienteParaSalvar.isEmpty()) {
-            clienteRepository.saveAll(clienteParaSalvar);
+        if (!clientesParaSalvar.isEmpty()) {
+            clienteRepository.saveAll(clientesParaSalvar);
         }
-        return new ImportacaoResponseDTO(clienteParaSalvar.size(), erros.size(), erros);
+
+        return new ImportacaoResponseDTO(clientesParaSalvar.size(), erros.size(), erros);
     }
 
     private String getStringCellValue(Cell cell) {

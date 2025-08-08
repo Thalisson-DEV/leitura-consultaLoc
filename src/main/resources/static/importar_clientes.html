@@ -64,6 +64,7 @@
                 <button type="submit">Importar</button>
             </form>
             <div id="loading-spinner" class="loading-spinner"></div>
+            <div id="resultado-importacao" style="margin-top:20px;"></div>
         </div>
     </main>
 </div>
@@ -90,15 +91,35 @@
         formData.append('file', fileInput.files[0]);
 
         try {
-            const response = await fetch('/api/v1/clientes/importar/csv', {
-                method: 'POST',
-                body: formData
-            });
-            const resultText = await response.text();
+            const result = await response.json();
+
             if (response.ok) {
-                showNotification(resultText, 'success');
+                let mensagem = `
+                                    <strong>Importação concluída!</strong><br>
+                                    Clientes importados: ${result.sucesso}<br>
+                                    Erros: ${result.erros}
+                                `;
+
+                if (result.listaErros && result.listaErros.length > 0) {
+                    mensagem += "<br><br><strong>Detalhes dos erros:</strong><ul>";
+                    result.listaErros.forEach(err => {
+                        mensagem += `<li>${err}</li>`;
+                    });
+                    mensagem += "</ul>";
+                }
+
+                document.getElementById('resultado-importacao').innerHTML = mensagem;
+
             } else {
-                showNotification(resultText, 'error');
+                let mensagem = "Falha ao importar.";
+                if (result.listaErros && result.listaErros.length > 0) {
+                    mensagem += "<br><br><strong>Detalhes:</strong><ul>";
+                    result.listaErros.forEach(err => {
+                        mensagem += `<li>${err}</li>`;
+                    });
+                    mensagem += "</ul>";
+                }
+                document.getElementById('resultado-importacao').innerHTML = mensagem;
             }
         } catch (error) {
             showNotification('Erro de conexão. Não foi possível contatar o servidor.', 'error');
