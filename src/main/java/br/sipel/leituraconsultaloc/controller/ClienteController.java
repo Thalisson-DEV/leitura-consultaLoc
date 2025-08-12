@@ -39,40 +39,18 @@ public class ClienteController {
 
     @Autowired
     private ClienteService clienteService;
-    private final ImportJobService jobService;
 
-    public ClienteController(ImportJobService jobService) {
-        this.jobService = jobService;
-    }
-
-    @PostMapping("/importar-async")
-    public ResponseEntity<?> importarAsync(@RequestParam("file") MultipartFile file) throws IOException {
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("Arquivo vazio");
+    @PostMapping("/importar/csv")
+    public ResponseEntity<String> importarClientes(@RequestParam("file") MultipartFile file) {
+        try {
+            long totalRegistros = clienteService.importarEAtualizar(file);
+            return ResponseEntity.ok("Arquivo processado com sucesso! Total de registros no sistema: " + totalRegistros);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao processar o arquivo: " + e.getMessage());
         }
-
-        ImportJobStatus job = jobService.createJob();
-
-        // Salva temporariamente o arquivo (pode ser no disco ou em storage)
-        Path uploadDir = Paths.get(System.getProperty("app.upload.dir", "/tmp/uploads"));
-        Files.createDirectories(uploadDir);
-        Path tempFile = uploadDir.resolve(job.getJobId() + "-" + file.getOriginalFilename());
-        try (InputStream is = file.getInputStream()) {
-            Files.copy(is, tempFile, StandardCopyOption.REPLACE_EXISTING);
-        }
-
-        // dispara processamento assíncrono
-        clienteService.processarArquivoAsync(tempFile.toString(), job.getJobId());
-
-        // retorna jobId para o cliente
-        return ResponseEntity.accepted().body(Map.of("jobId", job.getJobId()));
-    }
-
-    @GetMapping("/import/status/{jobId}")
-    public ResponseEntity<?> status(@PathVariable String jobId) {
-        ImportJobStatus job = jobService.getJob(jobId);
-        if (job == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(job);
     }
 
     /**

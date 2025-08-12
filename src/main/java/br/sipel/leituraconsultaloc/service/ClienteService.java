@@ -9,6 +9,7 @@ import br.sipel.leituraconsultaloc.infra.config.ImportJobStatus;
 import br.sipel.leituraconsultaloc.model.Cliente;
 import br.sipel.leituraconsultaloc.repositories.ClienteRepository;
 import com.monitorjbl.xlsx.StreamingReader;
+import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -16,120 +17,130 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.FileInputStream;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
-    private final ImportJobService jobService;
-    private static final int BATCH_SIZE = 1000;
-    private static final int MAX_ERRORS_TO_KEEP = 100;
 
-    public ClienteService(ClienteRepository clienteRepository, ImportJobService jobService) {
+    public ClienteService(ClienteRepository clienteRepository) {
         this.clienteRepository = clienteRepository;
-        this.jobService = jobService;
     }
 
-    @Async("importExecutor")
-    public void processarArquivoAsync(String filePath, String jobId) {
-        ImportJobStatus job = jobService.getJob(jobId);
-        if (job == null) return;
+    // Adicione este novo método. Ele é transacional para garantir a integridade dos dados.
+    @Transactional
+    public long importarEAtualizar(MultipartFile file) throws IOException {
+        List<Cliente> clientesDoArquivo = new ArrayList<>();
 
-        job.setStatus(ImportJobStatus.Status.RUNNING);
-        job.setStartedAt(Instant.now());
+        // Detecta o tipo de arquivo e chama o método de leitura apropriado
+        String filename = file.getOriginalFilename();
+        if (filename != null && filename.endsWith(".xlsx")) {
+            clientesDoArquivo = lerXlsx(file);
+        } else if (filename != null && filename.endsWith(".csv")) {
+            clientesDoArquivo = lerCsv(file);
+        } else {
+            throw new IllegalArgumentException("Formato de arquivo não suportado. Use .csv ou .xlsx");
+        }
 
-        List<Cliente> batch = new ArrayList<>(BATCH_SIZE);
+        if (clientesDoArquivo.isEmpty()) {
+            return clienteRepository.count();
+        }
 
-        try (InputStream is = new FileInputStream(filePath)) {
-            Workbook workbook = StreamingReader.builder()
-                    .rowCacheSize(100)
-                    .bufferSize(4096)
-                    .open(is);
+        // 1. Cria um Mapa dos clientes do arquivo para acesso rápido pela chave primária
+        Map<Long, Cliente> mapaClientesArquivo = clientesDoArquivo.stream()
+                .collect(Collectors.toMap(Cliente::getIdInstalacao, Function.identity(), (existente, novo) -> novo));
 
+        // 2. Busca no banco TODOS os clientes que já existem com as chaves do arquivo (MUITO eficiente)
+        List<Cliente> clientesExistentes = clienteRepository.findAllById(mapaClientesArquivo.keySet());
+
+        // 3. Itera sobre os clientes que já existem e atualiza a latitude e longitude
+        for (Cliente existente : clientesExistentes) {
+            Cliente dadosNovos = mapaClientesArquivo.get(existente.getIdInstalacao());
+            if (dadosNovos != null) {
+                existente.setLatitude(dadosNovos.getLatitude());
+                existente.setLongitude(dadosNovos.getLongitude());
+                // Remove do mapa para que apenas os novos clientes permaneçam
+                mapaClientesArquivo.remove(existente.getIdInstalacao());
+            }
+        }
+
+        // 4. Prepara a lista final para salvar:
+        //    - clientesExistentes (que foram atualizados)
+        //    - os valores restantes no mapa (que são os novos clientes a serem inseridos)
+        List<Cliente> listaParaSalvar = new ArrayList<>(clientesExistentes);
+        listaParaSalvar.addAll(mapaClientesArquivo.values());
+
+        // 5. Salva tudo de uma vez. O Spring Data JPA é inteligente e fará UPDATEs e INSERTs conforme necessário.
+        clienteRepository.saveAll(listaParaSalvar);
+
+        return clienteRepository.count();
+    }
+
+    // Método auxiliar para ler CSV
+    private List<Cliente> lerCsv(MultipartFile file) throws IOException {
+        List<Cliente> clientes = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            String linha;
+            boolean primeiraLinha = true;
+            while ((linha = reader.readLine()) != null) {
+                if (primeiraLinha) {
+                    primeiraLinha = false;
+                    continue;
+                }
+                String[] campos = linha.split(",");
+                if (campos.length >= 7) {
+                    clientes.add(criarCliente(campos));
+                }
+            }
+        }
+        return clientes;
+    }
+
+    // Método auxiliar para ler XLSX
+    private List<Cliente> lerXlsx(MultipartFile file) throws IOException {
+        List<Cliente> clientes = new ArrayList<>();
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
-            boolean firstRow = true;
-
+            boolean primeiraLinha = true;
             for (Row row : sheet) {
-                if (firstRow) {
-                    firstRow = false;
-                    continue; // pula cabeçalho
+                if (primeiraLinha) {
+                    primeiraLinha = false;
+                    continue;
                 }
-                job.setProcessed(job.getProcessed() + 1);
-                job.setTotalLines(job.getTotalLines() + 1);
-
-                try {
-                    String idInstalacaoStr = getStringCellValue(row.getCell(0));
-                    if (idInstalacaoStr == null || idInstalacaoStr.isBlank()) {
-                        continue;
-                    }
-                    long idInst = Long.parseLong(idInstalacaoStr);
-
-                    if (clienteRepository.findByIdInstalacao(idInst).isPresent()) {
-                        recordError(job, "Linha " + (job.getProcessed()) + ": ID já cadastrado");
-                        continue;
-                    }
-
-                    Cliente c = new Cliente();
-                    c.setIdInstalacao(idInst);
-                    c.setContaContrato(getStringCellValue(row.getCell(2)));
-                    c.setNumeroSerie(getStringCellValue(row.getCell(3)));
-                    c.setNumeroPoste(getStringCellValue(row.getCell(4)));
-                    c.setNomeCliente(getStringCellValue(row.getCell(5)));
-                    c.setLongitude(parseDoubleSafe(row.getCell(6)));
-                    c.setLatitude(parseDoubleSafe(row.getCell(7)));
-
-                    batch.add(c);
-
-                    if (batch.size() >= BATCH_SIZE) {
-                        clienteRepository.saveAll(batch);
-                        job.setSuccess(job.getSuccess() + batch.size());
-                        batch.clear();
-                    }
-
-                } catch (Exception e) {
-                    recordError(job, "Linha " + (job.getProcessed()) + ": " + e.getMessage());
+                String[] campos = new String[7];
+                for (int i = 0; i < 7; i++) {
+                    campos[i] = row.getCell(i) != null ? row.getCell(i).toString() : "";
                 }
-            }
-
-            // Salva qualquer batch restante
-            if (!batch.isEmpty()) {
-                clienteRepository.saveAll(batch);
-                job.setSuccess(job.getSuccess() + batch.size());
-            }
-
-            job.setStatus(ImportJobStatus.Status.COMPLETED);
-            job.setFinishedAt(Instant.now());
-            workbook.close();
-
-        } catch (Exception e) {
-            job.setStatus(ImportJobStatus.Status.FAILED);
-            job.setMessage(e.getMessage());
-            job.setFinishedAt(Instant.now());
-            // Log para você visualizar no console
-            e.printStackTrace();
-        } finally {
-            try {
-                Files.deleteIfExists(Paths.get(filePath));
-            } catch (Exception ignore) {
+                clientes.add(criarCliente(campos));
             }
         }
+        return clientes;
     }
 
-
-    private void recordError(ImportJobStatus job, String mensagem) {
-        job.setErrors(job.getErrors() + 1);
-        if (job.getSampleErrors().size() < MAX_ERRORS_TO_KEEP) {
-            job.getSampleErrors().add(mensagem);
-        }
+    // Método auxiliar para criar um objeto Cliente a partir dos campos
+    private Cliente criarCliente(String[] campos) {
+        Cliente cliente = new Cliente();
+        cliente.setIdInstalacao((long) Double.parseDouble(campos[0].trim()));
+        cliente.setContaContrato(campos[1].trim());
+        cliente.setNumeroSerie(campos[2].trim());
+        cliente.setNumeroPoste(campos[3].trim());
+        cliente.setNomeCliente(campos[4].trim());
+        cliente.setLongitude(Double.parseDouble(campos[5].trim()));
+        cliente.setLatitude(Double.parseDouble(campos[6].trim()));
+        return cliente;
     }
+
 
     // Lê uma célula como String, tratando nulos e tipos diferentes
     public static String getStringCellValue(Cell cell) {
@@ -183,87 +194,7 @@ public class ClienteService {
         }
     }
 
-    public ImportacaoResponseDTO importarClientes(@NotNull MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new RuntimeException("O arquivo enviado está vazio.");
-        }
 
-        List<Cliente> clientesParaSalvar = new ArrayList<>();
-        List<String> erros = new ArrayList<>();
-        int linhaAtual = 1;
-
-        try (InputStream inputStream = file.getInputStream();
-             Workbook workbook = new XSSFWorkbook(inputStream)) {
-
-            Sheet sheet = workbook.getSheetAt(0);
-            Iterator<Row> rows = sheet.iterator();
-
-            if (rows.hasNext()) {
-                rows.next(); // pula cabeçalho
-            }
-
-            while (rows.hasNext()) {
-                Row currentRow = rows.next();
-                linhaAtual++;
-
-                try {
-                    String idInstalacaoStr = getStringCellValue(currentRow.getCell(0));
-                    if (idInstalacaoStr.isBlank()) {
-                        continue; // pula linhas vazias
-                    }
-
-                    Long idInstalacao;
-                    try {
-                        idInstalacao = Long.valueOf(idInstalacaoStr);
-                    } catch (NumberFormatException e) {
-                        throw new RuntimeException("ID de instalação inválido");
-                    }
-
-                    if (clienteRepository.findByIdInstalacao(idInstalacao).isPresent()) {
-                        throw new RuntimeException("ID de instalação já cadastrado");
-                    }
-
-                    String contaContrato = getStringCellValue(currentRow.getCell(2));
-                    String numeroSerie = getStringCellValue(currentRow.getCell(3));
-                    String numeroPoste = getStringCellValue(currentRow.getCell(4));
-                    String nomeCliente = getStringCellValue(currentRow.getCell(5));
-                    String longitudeStr = getStringCellValue(currentRow.getCell(6));
-                    String latitudeStr = getStringCellValue(currentRow.getCell(7));
-
-                    Double longitude, latitude;
-                    try {
-                        longitude = Double.parseDouble(longitudeStr);
-                        latitude = Double.parseDouble(latitudeStr);
-                    } catch (NumberFormatException e) {
-                        throw new RuntimeException("Coordenadas inválidas");
-                    }
-
-                    Cliente novoCliente = new Cliente();
-                    novoCliente.setIdInstalacao(idInstalacao);
-                    novoCliente.setContaContrato(contaContrato);
-                    novoCliente.setNumeroSerie(numeroSerie);
-                    novoCliente.setNumeroPoste(numeroPoste);
-                    novoCliente.setNomeCliente(nomeCliente);
-                    novoCliente.setLongitude(longitude);
-                    novoCliente.setLatitude(latitude);
-
-                    clientesParaSalvar.add(novoCliente);
-
-                } catch (Exception e) {
-                    erros.add("Linha " + linhaAtual + ": " + e.getMessage());
-                }
-            }
-
-        } catch (Exception e) {
-            throw new RuntimeException("Falha ao ler o arquivo Excel: " + e.getMessage());
-        }
-
-        if (!clientesParaSalvar.isEmpty()) {
-            clienteRepository.saveAll(clientesParaSalvar);
-        }
-
-        return new ImportacaoResponseDTO(clientesParaSalvar.size(), erros.size(), erros);
-    }
 
     /**
      * Busca um cliente pelo seu ID (chave primária: idInstalacao).
@@ -274,7 +205,7 @@ public class ClienteService {
     public Cliente buscarPorInstalacao(long instalacao) {
         // CORREÇÃO: Usando o método padrão findById() para buscar pela chave primária.
         // Este é o método correto e mais eficiente para essa operação.
-        return clienteRepository.findById((int) instalacao)
+        return clienteRepository.findById(instalacao)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado para a instalação: " + instalacao));
     }
 

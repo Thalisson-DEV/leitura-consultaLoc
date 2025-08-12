@@ -1,263 +1,139 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Importar Clientes (.xlsx) — Sipel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar Clientes</title>
+    <link rel="stylesheet" href="assets/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root{
-            --bg:#f6f7fb;
-            --card:#ffffff;
-            --accent:#0b76ef;
-            --success:#4caf50;
-            --danger:#d9534f;
-            --muted:#666;
-            --radius:8px;
+        /* Estilos específicos para a barra de progresso */
+        .progress-container {
+            width: 100%;
+            background-color: var(--cor-borda);
+            border-radius: 8px;
+            margin-top: 20px;
+            overflow: hidden;
+            display: none; /* Começa escondido */
         }
-        body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);margin:0;padding:24px;color:#111}
-        .wrap{max-width:960px;margin:0 auto}
-        header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-        h1{font-size:20px;margin:0}
-        .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 6px 20px rgba(11,118,239,0.06);border:1px solid #e6eefc}
-        .form-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-        label{font-weight:600}
-        input[type="file"]{padding:6px}
-        button{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:6px;cursor:pointer}
-        button[disabled]{opacity:.6;cursor:not-allowed}
-        #resultado-importacao{margin-top:18px}
-        .progress-wrap{margin-top:12px}
-        .progress-bar-bg{width:100%;height:18px;background:#eee;border-radius:999px;overflow:hidden}
-        .progress-bar{height:18px;width:0%;background:var(--success);transition:width .5s ease}
-        .small{font-size:13px;color:var(--muted)}
-        .success-box{background:#e9f9ee;border:1px solid #c7f0d2;padding:12px;border-radius:6px;margin-top:8px}
-        .error-box{background:#fff0f0;border:1px solid #f6c2c2;padding:12px;border-radius:6px;margin-top:8px}
-        ul.err-list{margin:8px 0 0 18px;padding:0}
-        .spinner{display:inline-block;width:18px;height:18px;border:3px solid rgba(0,0,0,0.08);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .job-meta{margin-top:8px;font-size:13px;color:var(--muted)}
+        .progress-bar {
+            width: 0%;
+            height: 25px;
+            background-color: var(--cor-primaria);
+            text-align: center;
+            line-height: 25px;
+            color: white;
+            font-weight: 600;
+            transition: width 0.4s ease;
+        }
     </style>
 </head>
 <body>
-<div class="wrap">
-    <header>
-        <h1>Importar Clientes (.xlsx)</h1>
-        <div class="small">Envio assíncrono — ideal para planilhas grandes</div>
+
+<nav class="sidebar" id="sidebar">
+    <div class="logo-container">
+        <h2>Busca Sipel</h2>
+    </div>
+    <ul class="sidebar-nav">
+        <li><a href="index.html"><i data-lucide="home"></i> <span class="nav-text">Início</span></a></li>
+        <li><a href="buscar_instalacao.html"><i data-lucide="building-2"></i> <span class="nav-text">Por Instalação</span></a></li>
+        <li><a href="buscar_ctacontrato.html"><i data-lucide="file-text"></i> <span class="nav-text">Por Cta. Contrato</span></a></li>
+        <li><a href="buscar_numero_serie.html"><i data-lucide="barcode"></i> <span class="nav-text">Por N° de Série</span></a></li>
+        <li><a href="buscar_poste.html"><i data-lucide="lightbulb"></i> <span class="nav-text">Por N° do Poste</span></a></li>
+        <li><a href="buscar_nome.html"><i data-lucide="user"></i> <span class="nav-text">Por Nome</span></a></li>
+        <li><a href="importar_clientes.html"><i data-lucide="upload-cloud"></i> <span class="nav-text">Importar Clientes</span></a></li>
+    </ul>
+</nav>
+
+<div class="page-wrapper">
+    <header class="page-header">
+        <button id="menu-toggle"><i data-lucide="menu"></i></button>
+        <div class="header-controls">
+            <button id="theme-toggle"><i data-lucide="sun"></i><i data-lucide="moon" style="display:none;"></i></button>
+        </div>
     </header>
 
-    <div class="card">
-        <form id="form-importar" class="form-row" enctype="multipart/form-data" autocomplete="off">
-            <div style="flex:1 1 320px">
-                <label for="file-input">Selecione o arquivo Excel (.xlsx)</label><br>
-                <input id="file-input" name="file" type="file" accept=".xlsx" required />
-                <div class="small" style="margin-top:6px">Tamanho máximo configurado no servidor: ver <code>spring.servlet.multipart.max-file-size</code></div>
-            </div>
+    <main class="main-content">
+        <div class="container">
+            <h1>Importar Clientes</h1>
+            <p>Selecione um arquivo CSV ou XLSX para inserir ou atualizar clientes no sistema.</p>
+            <form id="form-importar">
+                <label for="file-input">Arquivo (CSV ou XLSX)</label>
+                <input id="file-input" type="file" name="file" accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" required>
+                <button type="submit">Processar Arquivo</button>
+            </form>
 
-            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
-                <button id="btn-importar" type="submit">Iniciar importação</button>
-                <button id="btn-cancel" type="button" style="background:#888;padding:8px 10px;display:none">Cancelar</button>
-            </div>
-        </form>
-
-        <div id="resultado-importacao"></div>
-    </div>
-</div>
-
-<script>
-    /*
-      Ajuste este valor caso o endpoint seja outro:
-      - Upload (start job): POST /api/v1/clientes/importar-async
-      - Status poll: GET  /api/v1/client/import/status/{jobId}
-    */
-    const API_UPLOAD_URL = '/api/v1/clientes/importar-async';
-    const API_STATUS_URL_BASE = '/api/v1/clientes/import/status/';
-
-    const form = document.getElementById('form-importar');
-    const fileInput = document.getElementById('file-input');
-    const resultadoDiv = document.getElementById('resultado-importacao');
-    const btnImportar = document.getElementById('btn-importar');
-    const btnCancel = document.getElementById('btn-cancel');
-
-    let pollIntervalRef = null;
-    let currentJobId = null;
-
-    function renderInitial() {
-        resultadoDiv.innerHTML = `
-        <div class="small job-meta">Nenhum job em andamento.</div>
-    `;
-    }
-    renderInitial();
-
-    function renderWaitingUpload() {
-        resultadoDiv.innerHTML = `<div style="display:flex;gap:10px;align-items:center"><div class="spinner"></div><div>Enviando arquivo e iniciando job...</div></div>`;
-    }
-
-    function renderJobStarted(jobId) {
-        currentJobId = jobId;
-        resultadoDiv.innerHTML = `
-        <div><strong>Job iniciado:</strong> <code>${jobId}</code></div>
-        <div class="job-meta">Você pode fechar esta aba — o processamento continuará no servidor.</div>
-
-        <div class="progress-wrap" id="progress-wrap">
-            <div style="margin-top:10px">
-                <div class="progress-bar-bg"><div id="progress-bar" class="progress-bar" style="width:0%"></div></div>
-                <div id="progress-text" class="small" style="margin-top:8px">Aguardando progresso...</div>
-                <div id="error-list" style="margin-top:8px"></div>
+            <!-- Barra de Progresso -->
+            <div id="progress-container" class="progress-container">
+                <div id="progress-bar" class="progress-bar">0%</div>
             </div>
         </div>
-    `;
-        btnCancel.style.display = 'inline-block';
-    }
+    </main>
+</div>
 
-    function renderFinalStatus(final) {
-        let html = `<div class="${final.errors && final.errors>0 ? 'error-box' : 'success-box'}">`;
-        html += `<strong>Finalizado</strong><br>`;
-        html += `Processados: ${final.processed ?? 0} | Importados: ${final.success ?? 0} | Erros: ${final.errors ?? 0}`;
-        html += `</div>`;
+<script src="assets/layout.js"></script>
+<script>
+    const form = document.getElementById('form-importar');
+    const fileInput = document.getElementById('file-input');
+    const submitButton = form.querySelector('button[type="submit"]');
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
 
-        if (final.sampleErrors && final.sampleErrors.length) {
-            html += `<div class="error-box"><strong>Erros (amostra):</strong><ul class="err-list">`;
-            final.sampleErrors.forEach(e => html += `<li>${escapeHtml(e)}</li>`);
-            html += `</ul></div>`;
-        }
-
-        html += `<div class="small job-meta" style="margin-top:8px">Job: <code>${final.jobId}</code></div>`;
-        resultadoDiv.innerHTML = html;
-    }
-
-    /* escape simples para evitar injeção no HTML */
-    function escapeHtml(str){
-        return String(str)
-            .replace(/&/g,'&amp;')
-            .replace(/</g,'&lt;')
-            .replace(/>/g,'&gt;')
-            .replace(/"/g,'&quot;')
-            .replace(/'/g,'&#39;');
-    }
-
-    async function startImport(file) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const resp = await fetch(API_UPLOAD_URL, { method: 'POST', body: formData });
-        if (!resp.ok) {
-            const txt = await resp.text().catch(()=>null);
-            throw new Error(txt || `Falha ao iniciar importação (status ${resp.status})`);
-        }
-
-        // espera JSON { jobId: "..." }
-        const body = await resp.json();
-        if (!body.jobId) throw new Error('Resposta inválida do servidor (jobId não encontrado).');
-        return body.jobId;
-    }
-
-    async function pollStatus(jobId, onUpdate) {
-        const url = API_STATUS_URL_BASE + encodeURIComponent(jobId);
-        // Poll simples: intervalo 2s
-        return new Promise((resolve, reject) => {
-            pollIntervalRef = setInterval(async () => {
-                try {
-                    const r = await fetch(url, { cache: 'no-store' });
-                    if (r.status === 404) {
-                        clearInterval(pollIntervalRef);
-                        pollIntervalRef = null;
-                        onUpdate({ status: 'FAILED', message: 'Job não encontrado (404)' });
-                        return reject(new Error('Job não encontrado (404)'));
-                    }
-                    const status = await r.json();
-                    onUpdate(status);
-
-                    if (status.status === 'COMPLETED') {
-                        clearInterval(pollIntervalRef);
-                        pollIntervalRef = null;
-                        return resolve(status);
-                    } else if (status.status === 'FAILED') {
-                        clearInterval(pollIntervalRef);
-                        pollIntervalRef = null;
-                        return reject(new Error(status.message || 'Job falhou'));
-                    }
-                } catch (err) {
-                    clearInterval(pollIntervalRef);
-                    pollIntervalRef = null;
-                    return reject(err);
-                }
-            }, 2000);
-        });
-    }
-
-    form.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        const file = fileInput.files[0];
-        if (!file) {
-            alert('Selecione um arquivo .xlsx antes de iniciar.');
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (!fileInput.files || fileInput.files.length === 0) {
+            showNotification('Por favor, selecione um arquivo.', 'error');
             return;
         }
 
-        // UX: bloqueia botão
-        btnImportar.disabled = true;
-        renderWaitingUpload();
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
 
-        try {
-            const jobId = await startImport(file);
-            renderJobStarted(jobId);
+        // Prepara a interface para o upload
+        submitButton.disabled = true;
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
 
-            // start polling
-            await pollStatus(jobId, (status) => {
-                const progressBar = document.getElementById('progress-bar');
-                const progressText = document.getElementById('progress-text');
-                const errorList = document.getElementById('error-list');
+        // Usamos XMLHttpRequest para ter acesso ao evento de progresso do upload
+        const xhr = new XMLHttpRequest();
 
-                let pct = 0;
-                if (status.totalLines && status.totalLines > 0) {
-                    pct = Math.min(100, Math.round((status.processed / status.totalLines) * 100));
-                } else {
-                    // se total unknown, usar heurística (ex.: processed capped)
-                    pct = Math.min(99, Math.round(Math.min(status.processed || 0, 1) * 100));
-                }
-                if (progressBar) progressBar.style.width = pct + '%';
+        // Evento que monitora o progresso do envio
+        xhr.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percentComplete + '%';
+                progressBar.textContent = percentComplete + '%';
+            }
+        });
 
-                if (progressText) {
-                    progressText.innerHTML = `
-                    Status: <strong>${escapeHtml(status.status)}</strong>
-                    &nbsp;|&nbsp; Processados: ${status.processed ?? 0}
-                    &nbsp;|&nbsp; Importados: ${status.success ?? 0}
-                    &nbsp;|&nbsp; Erros: ${status.errors ?? 0}
-                `;
-                }
+        // Evento para quando o upload terminar (com sucesso ou erro)
+        xhr.addEventListener('load', function() {
+            // Esconde a barra de progresso e reativa o botão
+            progressContainer.style.display = 'none';
+            submitButton.disabled = false;
+            form.reset();
 
-                if (errorList) {
-                    if (status.sampleErrors && status.sampleErrors.length > 0) {
-                        let html = `<strong>Erros (amostra):</strong><ul class="err-list">`;
-                        status.sampleErrors.forEach(e => html += `<li>${escapeHtml(e)}</li>`);
-                        html += `</ul>`;
-                        errorList.innerHTML = html;
-                    } else {
-                        errorList.innerHTML = '';
-                    }
-                }
-            });
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // Sucesso
+                showNotification(xhr.responseText, 'success');
+            } else {
+                // Erro
+                showNotification(xhr.responseText || 'Ocorreu um erro no processamento.', 'error');
+            }
+        });
 
-            // ao completar
-            const final = await fetch(API_STATUS_URL_BASE + encodeURIComponent(currentJobId)).then(r => r.json());
-            renderFinalStatus(final);
+        // Evento para erros de rede
+        xhr.addEventListener('error', function() {
+            progressContainer.style.display = 'none';
+            submitButton.disabled = false;
+            showNotification('Erro de rede. Não foi possível enviar o arquivo.', 'error');
+        });
 
-        } catch (err) {
-            resultadoDiv.innerHTML = `<div class="error-box"><strong>Erro:</strong> ${escapeHtml(err.message || err)}</div>`;
-        } finally {
-            btnImportar.disabled = false;
-            btnCancel.style.display = 'none';
-            currentJobId = null;
-        }
-    });
 
-    btnCancel.addEventListener('click', () => {
-        if (pollIntervalRef) {
-            clearInterval(pollIntervalRef);
-            pollIntervalRef = null;
-        }
-        resultadoDiv.innerHTML += `<div class="small job-meta" style="margin-top:8px">Polling cancelado pelo usuário. O job no servidor pode continuar. (JobId: ${currentJobId})</div>`;
-        btnImportar.disabled = false;
-        btnCancel.style.display = 'none';
-        currentJobId = null;
+        xhr.open('POST', '/api/v1/clientes/importar/csv');
+        xhr.send(formData);
     });
 </script>
 </body>
