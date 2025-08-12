@@ -2,6 +2,7 @@ package br.sipel.leituraconsultaloc.service;
 
 import br.sipel.leituraconsultaloc.dto.EstatisticasDTO;
 import br.sipel.leituraconsultaloc.dto.ImportacaoResponseDTO;
+import br.sipel.leituraconsultaloc.exception.FileImportException;
 import br.sipel.leituraconsultaloc.exception.ResourceNotFoundException;
 import br.sipel.leituraconsultaloc.infra.config.ExcelHelper;
 import br.sipel.leituraconsultaloc.infra.config.ImportJobService;
@@ -38,14 +39,12 @@ public class ClienteService {
         this.clienteRepository = clienteRepository;
     }
 
-    // Adicione este novo método. Ele é transacional para garantir a integridade dos dados.
     @Transactional
     public long importarEAtualizar(MultipartFile file) throws IOException {
-        List<Cliente> clientesDoArquivo = new ArrayList<>();
-
-        // Detecta o tipo de arquivo e chama o método de leitura apropriado
+        List<Cliente> clientesDoArquivo;
         String filename = file.getOriginalFilename();
-        if (filename != null && filename.endsWith(".xlsx")) {
+
+        if (filename != null && (filename.endsWith(".xlsx"))) {
             clientesDoArquivo = lerXlsx(file);
         } else if (filename != null && filename.endsWith(".csv")) {
             clientesDoArquivo = lerCsv(file);
@@ -57,87 +56,91 @@ public class ClienteService {
             return clienteRepository.count();
         }
 
-        // 1. Cria um Mapa dos clientes do arquivo para acesso rápido pela chave primária
         Map<Long, Cliente> mapaClientesArquivo = clientesDoArquivo.stream()
                 .collect(Collectors.toMap(Cliente::getIdInstalacao, Function.identity(), (existente, novo) -> novo));
 
-        // 2. Busca no banco TODOS os clientes que já existem com as chaves do arquivo (MUITO eficiente)
         List<Cliente> clientesExistentes = clienteRepository.findAllById(mapaClientesArquivo.keySet());
 
-        // 3. Itera sobre os clientes que já existem e atualiza a latitude e longitude
         for (Cliente existente : clientesExistentes) {
             Cliente dadosNovos = mapaClientesArquivo.get(existente.getIdInstalacao());
             if (dadosNovos != null) {
                 existente.setLatitude(dadosNovos.getLatitude());
                 existente.setLongitude(dadosNovos.getLongitude());
-                // Remove do mapa para que apenas os novos clientes permaneçam
                 mapaClientesArquivo.remove(existente.getIdInstalacao());
             }
         }
 
-        // 4. Prepara a lista final para salvar:
-        //    - clientesExistentes (que foram atualizados)
-        //    - os valores restantes no mapa (que são os novos clientes a serem inseridos)
         List<Cliente> listaParaSalvar = new ArrayList<>(clientesExistentes);
         listaParaSalvar.addAll(mapaClientesArquivo.values());
 
-        // 5. Salva tudo de uma vez. O Spring Data JPA é inteligente e fará UPDATEs e INSERTs conforme necessário.
         clienteRepository.saveAll(listaParaSalvar);
-
         return clienteRepository.count();
     }
 
-    // Método auxiliar para ler CSV
     private List<Cliente> lerCsv(MultipartFile file) throws IOException {
         List<Cliente> clientes = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String linha;
-            boolean primeiraLinha = true;
+            int numeroLinha = 1;
+            reader.readLine(); // Pula o cabeçalho
+
             while ((linha = reader.readLine()) != null) {
-                if (primeiraLinha) {
-                    primeiraLinha = false;
-                    continue;
-                }
+                numeroLinha++;
                 String[] campos = linha.split(",");
                 if (campos.length >= 7) {
-                    clientes.add(criarCliente(campos));
+                    try {
+                        clientes.add(criarCliente(campos));
+                    } catch (Exception e) {
+                        throw new FileImportException("Erro ao processar a linha " + numeroLinha + " do CSV: " + e.getMessage());
+                    }
                 }
             }
         }
         return clientes;
     }
 
-    // Método auxiliar para ler XLSX
     private List<Cliente> lerXlsx(MultipartFile file) throws IOException {
         List<Cliente> clientes = new ArrayList<>();
         try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
-            boolean primeiraLinha = true;
+            int numeroLinha = 0;
             for (Row row : sheet) {
-                if (primeiraLinha) {
-                    primeiraLinha = false;
-                    continue;
+                numeroLinha++;
+                if (numeroLinha == 1) continue; // Pula o cabeçalho
+
+                try {
+                    String[] campos = new String[7];
+                    for (int i = 0; i < 7; i++) {
+                        campos[i] = getCellStringValue(row.getCell(i));
+                    }
+                    clientes.add(criarCliente(campos));
+                } catch (Exception e) {
+                    throw new FileImportException("Erro ao processar a linha " + numeroLinha + " do XLSX: " + e.getMessage());
                 }
-                String[] campos = new String[7];
-                for (int i = 0; i < 7; i++) {
-                    campos[i] = row.getCell(i) != null ? row.getCell(i).toString() : "";
-                }
-                clientes.add(criarCliente(campos));
             }
         }
         return clientes;
     }
 
-    // Método auxiliar para criar um objeto Cliente a partir dos campos
+    private String getCellStringValue(Cell cell) {
+        if (cell == null) {
+            return "";
+        }
+        if (cell.getCellType() == CellType.NUMERIC) {
+            return String.format("%.0f", cell.getNumericCellValue());
+        }
+        return cell.toString().trim();
+    }
+
     private Cliente criarCliente(String[] campos) {
         Cliente cliente = new Cliente();
-        cliente.setIdInstalacao((long) Double.parseDouble(campos[0].trim()));
+        cliente.setIdInstalacao(Long.parseLong(campos[0].trim()));
         cliente.setContaContrato(campos[1].trim());
         cliente.setNumeroSerie(campos[2].trim());
         cliente.setNumeroPoste(campos[3].trim());
         cliente.setNomeCliente(campos[4].trim());
-        cliente.setLongitude(Double.parseDouble(campos[5].trim()));
-        cliente.setLatitude(Double.parseDouble(campos[6].trim()));
+        cliente.setLongitude(Double.parseDouble(campos[5].trim().replace(",", ".")));
+        cliente.setLatitude(Double.parseDouble(campos[6].trim().replace(",", ".")));
         return cliente;
     }
 

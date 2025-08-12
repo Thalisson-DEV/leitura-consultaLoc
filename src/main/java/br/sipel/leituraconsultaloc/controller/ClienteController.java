@@ -1,6 +1,7 @@
 package br.sipel.leituraconsultaloc.controller;
 
 import br.sipel.leituraconsultaloc.dto.ImportacaoResponseDTO;
+import br.sipel.leituraconsultaloc.exception.FileImportException;
 import br.sipel.leituraconsultaloc.infra.config.ImportJobService;
 import br.sipel.leituraconsultaloc.infra.config.ImportJobStatus;
 import br.sipel.leituraconsultaloc.model.Cliente;
@@ -45,11 +46,12 @@ public class ClienteController {
         try {
             long totalRegistros = clienteService.importarEAtualizar(file);
             return ResponseEntity.ok("Arquivo processado com sucesso! Total de registros no sistema: " + totalRegistros);
-        } catch (IllegalArgumentException e) {
+        } catch (FileImportException | IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao processar o arquivo: " + e.getMessage());
+                    .body("Ocorreu um erro interno no servidor. Verifique os logs para mais detalhes.");
         }
     }
 
