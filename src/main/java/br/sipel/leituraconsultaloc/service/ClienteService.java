@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 public class ClienteService {
 
     private final ClienteRepository clienteRepository;
+    private static final int BATCH_SIZE = 1000; // Define o tamanho de cada lote
 
     public ClienteService(ClienteRepository clienteRepository) {
         this.clienteRepository = clienteRepository;
@@ -56,27 +57,48 @@ public class ClienteService {
             return clienteRepository.count();
         }
 
-        Map<Long, Cliente> mapaClientesArquivo = clientesDoArquivo.stream()
-                .collect(Collectors.toMap(Cliente::getIdInstalacao, Function.identity(), (existente, novo) -> novo));
-
-        List<Cliente> clientesExistentes = clienteRepository.findAllById(mapaClientesArquivo.keySet());
-
-        for (Cliente existente : clientesExistentes) {
-            Cliente dadosNovos = mapaClientesArquivo.get(existente.getIdInstalacao());
-            if (dadosNovos != null) {
-                existente.setLatitude(dadosNovos.getLatitude());
-                existente.setLongitude(dadosNovos.getLongitude());
-                mapaClientesArquivo.remove(existente.getIdInstalacao());
-            }
+        // Processa a lista de clientes em lotes para evitar o erro de limite de parâmetros
+        for (int i = 0; i < clientesDoArquivo.size(); i += BATCH_SIZE) {
+            int end = Math.min(i + BATCH_SIZE, clientesDoArquivo.size());
+            List<Cliente> batch = clientesDoArquivo.subList(i, end);
+            processarLote(batch);
         }
 
-        List<Cliente> listaParaSalvar = new ArrayList<>(clientesExistentes);
-        listaParaSalvar.addAll(mapaClientesArquivo.values());
-
-        clienteRepository.saveAll(listaParaSalvar);
         return clienteRepository.count();
     }
 
+    private void processarLote(List<Cliente> lote) {
+        Map<Long, Cliente> mapaClientesArquivo = lote.stream()
+                .collect(Collectors.toMap(Cliente::getIdInstalacao, Function.identity(), (existente, novo) -> novo));
+
+        List<Long> idsDoLote = new ArrayList<>(mapaClientesArquivo.keySet());
+        List<Cliente> clientesExistentes = clienteRepository.findAllById(idsDoLote);
+
+        Map<Long, Cliente> mapaClientesExistentes = clientesExistentes.stream()
+                .collect(Collectors.toMap(Cliente::getIdInstalacao, Function.identity()));
+
+        List<Cliente> listaParaSalvar = new ArrayList<>();
+
+        for (Cliente clienteDoArquivo : lote) {
+            Cliente clienteExistente = mapaClientesExistentes.get(clienteDoArquivo.getIdInstalacao());
+            if (clienteExistente != null) {
+                // Se o cliente existe, atualiza os dados e o adiciona para salvar
+                clienteExistente.setLatitude(clienteDoArquivo.getLatitude());
+                clienteExistente.setLongitude(clienteDoArquivo.getLongitude());
+                listaParaSalvar.add(clienteExistente);
+            } else {
+                // Se o cliente não existe, o adiciona para ser inserido
+                listaParaSalvar.add(clienteDoArquivo);
+            }
+        }
+
+        // Salva o lote de clientes (atualizados e novos)
+        if (!listaParaSalvar.isEmpty()) {
+            clienteRepository.saveAll(listaParaSalvar);
+        }
+    }
+
+    // Seus métodos de leitura (lerCsv, lerXlsx, criarCliente) e de busca permanecem aqui...
     private List<Cliente> lerCsv(MultipartFile file) throws IOException {
         List<Cliente> clientes = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
@@ -142,59 +164,6 @@ public class ClienteService {
         cliente.setLongitude(Double.parseDouble(campos[5].trim().replace(",", ".")));
         cliente.setLatitude(Double.parseDouble(campos[6].trim().replace(",", ".")));
         return cliente;
-    }
-
-
-    // Lê uma célula como String, tratando nulos e tipos diferentes
-    public static String getStringCellValue(Cell cell) {
-        if (cell == null) {
-            return "";
-        }
-
-        if (cell.getCellType() == CellType.STRING) {
-            return cell.getStringCellValue().trim();
-        } else if (cell.getCellType() == CellType.NUMERIC) {
-            // Se for número, converte para String removendo .0 se for inteiro
-            double val = cell.getNumericCellValue();
-            if (val == (long) val) {
-                return String.valueOf((long) val);
-            }
-            return String.valueOf(val);
-        } else if (cell.getCellType() == CellType.BOOLEAN) {
-            return String.valueOf(cell.getBooleanCellValue());
-        } else if (cell.getCellType() == CellType.FORMULA) {
-            try {
-                return cell.getStringCellValue().trim();
-            } catch (IllegalStateException e) {
-                try {
-                    double val = cell.getNumericCellValue();
-                    return String.valueOf(val);
-                } catch (Exception ex) {
-                    return "";
-                }
-            }
-        }
-
-        return "";
-    }
-
-    // Converte para Double de forma segura
-    public static Double parseDoubleSafe(Cell cell) {
-        if (cell == null) {
-            return null;
-        }
-
-        try {
-            if (cell.getCellType() == CellType.NUMERIC) {
-                return cell.getNumericCellValue();
-            } else {
-                String str = getStringCellValue(cell);
-                if (str.isEmpty()) return null;
-                return Double.parseDouble(str.replace(",", "."));
-            }
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
 
