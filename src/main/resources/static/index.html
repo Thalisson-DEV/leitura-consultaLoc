@@ -58,23 +58,10 @@
 
     <main class="main-content">
         <div class="container" style="max-width: 1200px;">
-            <h1>Dashboard Sipel</h1>
-            <p>Bem-vindo à Central de Busca. Veja as estatísticas do sistema abaixo:</p>
+            <h1>Central de Busca Sipel</h1>
+            <p>Bem-vindo à Central de Busca SIPEL.</p>
 
             <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
-                <!-- Card 1: Total de Clientes - Principal KPI -->
-                <div class="dashboard-card" style="grid-column: 1 / -1;">
-                    <div class="dashboard-card-header">
-                        <div class="dashboard-card-title">Total de Clientes</div>
-                        <div class="dashboard-card-icon">
-                            <i data-lucide="users"></i>
-                        </div>
-                    </div>
-                    <div class="dashboard-card-content">
-                        <div id="total-clientes" class="dashboard-metric" style="font-size: 3rem;">—</div>
-                        <div class="dashboard-label">Clientes registrados no sistema</div>
-                    </div>
-                </div>
 
                 <!-- Card 2: Links Rápidos -->
                 <div class="dashboard-card">
@@ -130,9 +117,6 @@
             lucide.createIcons();
             console.log('Ícones inicializados');
         }
-
-        // Inicializa o dashboard com dados reais do backend
-        inicializarDashboard();
 
         // Configuração explícita do botão de menu móvel
         const menuButton = document.getElementById('menu-toggle');

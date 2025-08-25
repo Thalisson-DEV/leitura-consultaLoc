@@ -1,9 +1,6 @@
 package br.sipel.leituraconsultaloc.controller;
 
-import br.sipel.leituraconsultaloc.dto.ImportacaoResponseDTO;
 import br.sipel.leituraconsultaloc.exception.FileImportException;
-import br.sipel.leituraconsultaloc.infra.config.ImportJobService;
-import br.sipel.leituraconsultaloc.infra.config.ImportJobStatus;
 import br.sipel.leituraconsultaloc.model.Cliente;
 import br.sipel.leituraconsultaloc.service.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,20 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Controller para gerir as operações relacionadas aos Clientes.

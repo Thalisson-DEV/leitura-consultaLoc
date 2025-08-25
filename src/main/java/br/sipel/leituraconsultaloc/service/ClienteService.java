@@ -1,30 +1,20 @@
 package br.sipel.leituraconsultaloc.service;
 
 import br.sipel.leituraconsultaloc.dto.EstatisticasDTO;
-import br.sipel.leituraconsultaloc.dto.ImportacaoResponseDTO;
 import br.sipel.leituraconsultaloc.exception.FileImportException;
 import br.sipel.leituraconsultaloc.exception.ResourceNotFoundException;
-import br.sipel.leituraconsultaloc.infra.config.ExcelHelper;
-import br.sipel.leituraconsultaloc.infra.config.ImportJobService;
-import br.sipel.leituraconsultaloc.infra.config.ImportJobStatus;
 import br.sipel.leituraconsultaloc.model.Cliente;
 import br.sipel.leituraconsultaloc.repositories.ClienteRepository;
-import com.monitorjbl.xlsx.StreamingReader;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotNull;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -174,50 +164,48 @@ public class ClienteService {
      * @return O objeto Cliente encontrado.
      * @throws ResourceNotFoundException se nenhum cliente for encontrado.
      */
+    @Cacheable("clientes")
     public Cliente buscarPorInstalacao(long instalacao) {
-        // CORREÇÃO: Usando o método padrão findById() para buscar pela chave primária.
-        // Este é o método correto e mais eficiente para essa operação.
         return clienteRepository.findById(instalacao)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado para a instalação: " + instalacao));
     }
 
-    // --- MÉTODO NOVO NECESSÁRIO ---
     /**
      * Busca um cliente pelo número da conta contrato.
      * @param contaContrato O número da conta contrato.
      * @return O objeto Cliente encontrado.
      * @throws ResourceNotFoundException se nenhum cliente for encontrado.
      */
+    @Cacheable("clientes")
     public Cliente buscarPorContaContrato(String contaContrato) {
         return clienteRepository.findByContaContrato(contaContrato)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado para a conta contrato: " + contaContrato));
     }
 
-    // --- MÉTODO NOVO NECESSÁRIO ---
     /**
      * Busca um cliente pelo número da conta contrato.
      * @param nomeCliente O número da conta contrato.
      * @return O objeto Cliente encontrado.
      * @throws ResourceNotFoundException se nenhum cliente for encontrado.
      */
+    @Cacheable("clientes")
     public Cliente buscarPorNomeCliente(String nomeCliente) {
         return clienteRepository.findByNomeCliente(nomeCliente)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado para o nome: " + nomeCliente));
     }
 
-    // --- MÉTODO NOVO NECESSÁRIO ---
     /**
      * Busca um cliente pelo número da serie do medidor.
      * @param numeroSerie O número de serie do medidor.
      * @return O objeto Cliente encontrado.
      * @throws ResourceNotFoundException se nenhum cliente for encontrado.
      */
+    @Cacheable("clientes")
     public Cliente buscarPorNumeroSerie(String numeroSerie) {
         return clienteRepository.findByNumeroSerie(numeroSerie)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado para o N° de Série: " + numeroSerie));
     }
 
-    // --- MÉTODO NOVO NECESSÁRIO ---
     /**
      * Busca por clientes com um determinado número de poste e retorna o primeiro encontrado.
      * Ideal para casos onde o número do poste não é uma chave única.
@@ -225,6 +213,7 @@ public class ClienteService {
      * @return O primeiro objeto Cliente encontrado que corresponde ao critério.
      * @throws ResourceNotFoundException se nenhum cliente for encontrado.
      */
+    @Cacheable("clientes")
     public Cliente buscarPorNumeroPoste(String numeroPoste) {
         // 1. O repositório agora retorna uma lista de clientes.
         List<Cliente> clientesEncontrados = clienteRepository.findByNumeroPoste(numeroPoste);
@@ -236,18 +225,5 @@ public class ClienteService {
 
         // 3. Se a lista não estiver vazia, retorna apenas o primeiro elemento.
         return clientesEncontrados.get(0);
-    }
-
-    /**
-     * Obtém estatísticas gerais do sistema para exibição no dashboard
-     * @return Objeto com as estatísticas calculadas
-     */
-    public EstatisticasDTO obterEstatisticas() {
-        // Contagem total de clientes no sistema
-        long totalClientes = clienteRepository.count();
-
-        return EstatisticasDTO.builder()
-                .totalClientes(totalClientes)
-                .build();
     }
 }
