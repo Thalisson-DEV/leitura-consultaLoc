@@ -190,8 +190,13 @@ public class ClienteService {
      */
     @Cacheable("clientes")
     public Cliente buscarPorNomeCliente(String nomeCliente) {
-        return clienteRepository.findByNomeCliente(nomeCliente)
-                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado para o nome: " + nomeCliente));
+        List<Cliente> listaClientes = clienteRepository.findByNomeCliente(nomeCliente);
+
+        if (listaClientes.isEmpty()) {
+            throw new ResourceNotFoundException("Nenhum cliente encontrado para o nome: " + nomeCliente);
+        }
+
+        return listaClientes.get(0);
     }
 
     /**
