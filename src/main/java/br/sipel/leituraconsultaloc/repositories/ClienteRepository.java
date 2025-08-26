@@ -11,7 +11,14 @@ import java.util.Optional;
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     Optional findByIdInstalacao(Long idInstalacao);
 
-    Optional<Cliente> findByContaContrato(String contaContrato);
+    @Query(
+            nativeQuery = true,
+            value = " SELECT c.* FROM clientes c " +
+                    "WHERE (:contaContrato IS NULL OR LOWER(CAST(c.conta_contrato AS TEXT)) LIKE LOWER(CONCAT('%', :contaContrato, '%')))"
+    )
+    Optional<Cliente> findByContaContrato(
+            @Param("contaContrato") String contaContrato
+    );
 
     @Query(
             nativeQuery = true,
