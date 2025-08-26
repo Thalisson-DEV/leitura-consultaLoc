@@ -1,6 +1,5 @@
 package br.sipel.leituraconsultaloc.service;
 
-import br.sipel.leituraconsultaloc.dto.EstatisticasDTO;
 import br.sipel.leituraconsultaloc.exception.FileImportException;
 import br.sipel.leituraconsultaloc.exception.ResourceNotFoundException;
 import br.sipel.leituraconsultaloc.model.Cliente;
