@@ -13,7 +13,14 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
     Optional<Cliente> findByContaContrato(String contaContrato);
 
-    Optional<Cliente> findByNumeroSerie(String numeroSerie);
+    @Query(
+            nativeQuery = true,
+            value = " SELECT c.* FROM clientes c " +
+                    "WHERE (:numeroSerie IS NULL OR LOWER(CAST(c.numero_serie AS TEXT)) LIKE LOWER(CONCAT('%', :numeroSerie, '%')))"
+    )
+    Optional<Cliente> findByNumeroSerie(
+            @Param("numeroSerie") String numeroSerie
+    );
 
     List<Cliente> findByNumeroPoste(String numeroPoste);
 
