@@ -31,27 +31,18 @@ window.addEventListener('load', function() {
     menuButton.onclick = function(e) {
       e.preventDefault();
       e.stopPropagation();
-      console.log('Botão de menu clicado (evento direto)');
 
       // Alternar classe no sidebar
       sidebar.classList.toggle('mobile-open');
 
       // Alternar overlay
       mobileOverlay.classList.toggle('active');
-
-      // Debug
-      console.log('Menu móvel: ' + (sidebar.classList.contains('mobile-open') ? 'aberto' : 'fechado'));
     };
 
     // Fechar menu quando clicar no overlay
     mobileOverlay.onclick = function() {
       sidebar.classList.remove('mobile-open');
       mobileOverlay.classList.remove('active');
-      console.log('Menu fechado pelo overlay');
     };
-
-    console.log('Botão de menu configurado com sucesso');
-  } else {
-    console.error('Falha ao encontrar elementos do menu');
   }
 });

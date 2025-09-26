@@ -1,4 +1,4 @@
-CREATE TABLE cliente (
+CREATE TABLE clientes (
     id_instalacao BIGSERIAL PRIMARY KEY,
     conta_contrato VARCHAR(100),
     numero_serie VARCHAR(100),
