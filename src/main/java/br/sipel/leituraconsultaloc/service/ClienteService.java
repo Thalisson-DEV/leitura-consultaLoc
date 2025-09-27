@@ -35,7 +35,15 @@ public class ClienteService {
      */
     @Cacheable("clientes")
     public CoordenadasClientes buscarPorContaContrato(String contaContrato) {
-        return clienteRepository.findByContaContratoIgnoreCase(contaContrato)
+
+        String contaContratoFormatada = contaContrato;
+
+        if (!contaContrato.endsWith(".0")) {
+            contaContratoFormatada = contaContrato + ".0";
+        }
+
+        // Query com a conta contrato formatada
+        return clienteRepository.findByContaContratoIgnoreCase(contaContratoFormatada)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado para a conta contrato: " + contaContrato));
     }
 
@@ -59,7 +67,14 @@ public class ClienteService {
      */
     @Cacheable("clientes")
     public CoordenadasClientes buscarPorNumeroSerie(String numeroSerie) {
-        return clienteRepository.findByNumeroSerieIgnoreCase(numeroSerie)
+
+        String numeroSerieFormatado = numeroSerie;
+
+        if (!numeroSerie.endsWith(".0")) {
+            numeroSerieFormatado = numeroSerie + ".0";
+        }
+
+        return clienteRepository.findByNumeroSerieIgnoreCase(numeroSerieFormatado)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado para o N° de Série: " + numeroSerie));
     }
 
