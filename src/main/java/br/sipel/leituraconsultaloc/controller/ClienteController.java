@@ -1,14 +1,11 @@
 package br.sipel.leituraconsultaloc.controller;
 
-import br.sipel.leituraconsultaloc.exception.FileImportException;
-import br.sipel.leituraconsultaloc.model.Cliente;
+import br.sipel.leituraconsultaloc.model.CoordenadasClientes;
 import br.sipel.leituraconsultaloc.service.ClienteService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import java.net.URI;
 
 /**
@@ -22,21 +19,10 @@ import java.net.URI;
 @CrossOrigin(origins = "*")
 public class ClienteController {
 
-    @Autowired
-    private ClienteService clienteService;
+    private final ClienteService clienteService;
 
-    @PostMapping("/importar/csv")
-    public ResponseEntity<String> importarClientes(@RequestParam("file") MultipartFile file) {
-        try {
-            long totalRegistros = clienteService.importarEAtualizar(file);
-            return ResponseEntity.ok("Arquivo processado com sucesso! Total de registros no sistema: " + totalRegistros);
-        } catch (FileImportException | IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Ocorreu um erro interno no servidor. Verifique os logs para mais detalhes.");
-        }
+    public ClienteController(ClienteService clienteService) {
+        this.clienteService = clienteService;
     }
 
     /**
@@ -45,9 +31,8 @@ public class ClienteController {
      * @return ResponseEntity com status 302 (Found) para redirecionamento ou 404 se não encontrado.
      */
     @GetMapping("/instalacao/{instalacao}/redirecionar-maps")
-    public ResponseEntity<Void> redirecionarPorInstalacao(@PathVariable long instalacao) {
-        // CORREÇÃO: Removido 'throws Throwable'
-        Cliente cliente = clienteService.buscarPorInstalacao(instalacao);
+    public ResponseEntity<Void> redirecionarPorInstalacao(@PathVariable Long instalacao) {
+        CoordenadasClientes cliente = clienteService.buscarPorInstalacao(instalacao);
         return criarRespostaDeRedirecionamento(cliente);
     }
 
@@ -58,7 +43,7 @@ public class ClienteController {
      */
     @GetMapping("/conta-contrato/{contaContrato}/redirecionar-maps")
     public ResponseEntity<Void> redirecionarPorContaContrato(@PathVariable String contaContrato) {
-        Cliente cliente = clienteService.buscarPorContaContrato(contaContrato);
+        CoordenadasClientes cliente = clienteService.buscarPorContaContrato(contaContrato);
         return criarRespostaDeRedirecionamento(cliente);
     }
 
@@ -69,7 +54,7 @@ public class ClienteController {
      */
     @GetMapping("/numero-serie/{numeroSerie}/redirecionar-maps")
     public ResponseEntity<Void> redirecionarPorNumeroSerie(@PathVariable String numeroSerie) {
-        Cliente cliente = clienteService.buscarPorNumeroSerie(numeroSerie);
+        CoordenadasClientes cliente = clienteService.buscarPorNumeroSerie(numeroSerie);
         return criarRespostaDeRedirecionamento(cliente);
     }
 
@@ -80,7 +65,7 @@ public class ClienteController {
      */
     @GetMapping("/nome/{nomeCliente}/redirecionar-maps") // CORREÇÃO: URL padronizada
     public ResponseEntity<Void> redirecionarPorNomeCliente(@PathVariable String nomeCliente) {
-        Cliente cliente = clienteService.buscarPorNomeCliente(nomeCliente);
+        CoordenadasClientes cliente = clienteService.buscarPorNomeCliente(nomeCliente);
         return criarRespostaDeRedirecionamento(cliente);
     }
 
@@ -91,7 +76,7 @@ public class ClienteController {
      */
     @GetMapping("/numero-poste/{numeroPoste}/redirecionar-maps")
     public ResponseEntity<Void> redirecionarPorNumeroPoste(@PathVariable String numeroPoste) {
-        Cliente cliente = clienteService.buscarPorNumeroPoste(numeroPoste);
+        CoordenadasClientes cliente = clienteService.buscarPorNumeroPoste(numeroPoste);
         return criarRespostaDeRedirecionamento(cliente);
     }
 
@@ -100,8 +85,8 @@ public class ClienteController {
      * @param cliente O cliente encontrado com dados de latitude e longitude.
      * @return Um ResponseEntity configurado para redirecionar o usuário.
      */
-    private ResponseEntity<Void> criarRespostaDeRedirecionamento(Cliente cliente) {
-        String mapsUrl = String.format("https://www.google.com/maps?q=%s,%s", cliente.getLatitude(), cliente.getLongitude());
+    private ResponseEntity<Void> criarRespostaDeRedirecionamento(CoordenadasClientes cliente) {
+        String mapsUrl = String.format("https://www.google.com/maps?q=%f,%f", cliente.getLatitude(), cliente.getLongitude());
         HttpHeaders headers = new HttpHeaders();
         headers.setLocation(URI.create(mapsUrl));
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
